@@ -102,9 +102,14 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
 .name::placeholder{color:var(--muted)}
 .board{font-family:var(--hud);font-size:9px;line-height:2;color:var(--ink-dim);width:min(360px,88vw);font-variant-numeric:tabular-nums}
 .board h3{font-size:9px;color:var(--gold);letter-spacing:.14em;margin:0 0 4px;font-weight:400;text-transform:uppercase}
-.board .row{display:grid;grid-template-columns:1fr auto auto;gap:14px;text-align:left}
+.board .row{display:grid;grid-template-columns:minmax(0,1fr) 5ch 9ch;gap:10px;text-align:left;white-space:nowrap}
+.board .row span:first-child{overflow:hidden;text-overflow:ellipsis}
+.board .row span:nth-child(2){text-align:center}
+.board .row span:last-child{text-align:right}
+.desktop .board .row{font-size:11px}
 .board .row span:last-child{color:var(--gold)}
 .board .me{color:var(--ink);background:rgba(242,176,30,.12)}
+.board .dots{text-align:center;color:var(--muted);letter-spacing:.3em;line-height:1.2}
 #end-cheat{color:var(--blood)}
 .mailbox{display:flex;flex-direction:column;align-items:center;gap:8px;width:min(360px,88vw)}
 .mailrow{display:flex;gap:8px;align-items:stretch;width:100%}
@@ -344,19 +349,23 @@ const Scores = {
     if (i >= 0) { if (this.rank(rec, list[i]) < 0) list[i] = rec; } else list.push(rec);
     list.sort(this.rank); this.save(list); return list;
   },
-  async api(body) { // POST без заголовков – text/plain, чтобы Apps Script принял без preflight
-    const r = await fetch(CONFIG.scoresUrl, body ? { method: 'POST', body: JSON.stringify(body) } : { method: 'GET' });
+  async api(body, name) { // POST без заголовков – text/plain, чтобы Apps Script принял без preflight
+    const url = body ? CONFIG.scoresUrl : CONFIG.scoresUrl + (CONFIG.scoresUrl.indexOf('?') < 0 ? '?' : '&') + 'top=20&me=' + encodeURIComponent(name || '');
+    const r = await fetch(url, body ? { method: 'POST', body: JSON.stringify(body) } : { method: 'GET' });
     const d = await r.json(); if (!d || !d.ok) throw new Error(d && d.error || 'server');
     return d;
   },
-  async fetch() {
-    if (!CONFIG.scoresUrl) return this.load();
-    try { const d = await this.api(null); this.online = true; this.save(d.list); return d.list; } catch (e) { this.online = false; return this.load(); }
+  total: 0, me: null, // сколько всего игроков и моя строка с местом (с сервера; локально считаем сами)
+  take(d) { this.online = true; this.save(d.list); this.total = d.total || d.list.length; this.me = d.me || null; return d.list; },
+  localMe(name) { const list = this.load(), i = list.findIndex(r => r.name === name); this.total = list.length; this.me = i >= 0 ? Object.assign({ rank: i + 1 }, list[i]) : null; return list; },
+  async fetch(name) {
+    if (!CONFIG.scoresUrl) return this.localMe(name);
+    try { return this.take(await this.api(null, name)); } catch (e) { this.online = false; return this.localMe(name); }
   },
   async submit(rec) {
     const local = this.local(rec);
-    if (!CONFIG.scoresUrl) return local;
-    try { const d = await this.api(Object.assign({ action: 'score', id: playerId }, rec)); this.online = true; this.save(d.list); return d.list; } catch (e) { this.online = false; return local; }
+    if (!CONFIG.scoresUrl) return this.localMe(rec.name);
+    try { return this.take(await this.api(Object.assign({ action: 'score', id: playerId }, rec))); } catch (e) { this.online = false; return this.localMe(rec.name); }
   },
   async email(email, rec) {
     if (!CONFIG.scoresUrl) throw new Error('offline');
@@ -364,10 +373,15 @@ const Scores = {
   },
 };
 const esc = str => String(str).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// топ-10, а если своя строка ниже – многоточие и она с местом; в заголовке – сколько всего игроков
 function renderBoard(id, me, list) {
-  list = (list || Scores.load()).slice(0, 8);
-  const title = CONFIG.scoresUrl ? (Scores.online ? 'рекорды' : 'рекорды · нет связи, только этот браузер') : 'рекорды';
-  document.getElementById(id).innerHTML = '<h3>' + title + '</h3>' + (list.length ? list.map((r, i) => '<div class="row' + (r.name === me ? ' me' : '') + '"><span>' + (i + 1) + '. ' + esc(r.name) + '</span><span>' + (r.won ? 'дожил' : fmt(r.time)) + '</span><span>$' + r.cash + '</span></div>').join('') : '<div>пока никого – будь первым</div>');
+  list = (list || Scores.load()).slice(0, 10);
+  const total = Math.max(Scores.total, list.length);
+  const title = (CONFIG.scoresUrl && !Scores.online ? 'рекорды · нет связи, только этот браузер' : 'рекорды') + (total > 10 ? ' · игроков: ' + total : '');
+  const row = (r, n) => '<div class="row' + (r.name === me ? ' me' : '') + '"><span>' + n + '. ' + esc(r.name) + '</span><span>' + (r.won ? 'дожил' : fmt(r.time)) + '</span><span>$' + r.cash + '</span></div>';
+  let html = list.length ? list.map((r, i) => row(r, i + 1)).join('') : '<div>пока никого – будь первым</div>';
+  if (me && Scores.me && Scores.me.name === me && Scores.me.rank > 10) html += '<div class="dots">···</div>' + row(Scores.me, Scores.me.rank);
+  document.getElementById(id).innerHTML = '<h3>' + title + '</h3>' + html;
 }
 function playerName() {
   const el = document.getElementById('pname'), n = (el.value || '').trim().slice(0, 14).toUpperCase() || 'АНОНИМ';
@@ -375,7 +389,7 @@ function playerName() {
   return n;
 }
 try { document.getElementById('pname').value = localStorage.getItem(NAME_KEY) || ''; } catch (e) {}
-renderBoard('board-start'); Scores.fetch().then(list => renderBoard('board-start', null, list));
+renderBoard('board-start'); Scores.fetch(localStorage.getItem(NAME_KEY) || '').then(list => renderBoard('board-start', localStorage.getItem(NAME_KEY) || '', list));
 let cheatBuf = '';       // набор чит-кода с клавиатуры
 
 // ============================================================
@@ -1278,7 +1292,7 @@ function showEnd() {
   lastRec = { name: curName, cash: Math.round(cash), won, time: Math.round(t) };
   renderBoard('board-end', curName);
   const after = list => { renderBoard('board-end', curName, list); renderBoard('board-start', curName, list); };
-  if (!cheated) Scores.submit(lastRec).then(after); else Scores.fetch().then(after);
+  if (!cheated) Scores.submit(lastRec).then(after); else Scores.fetch(curName).then(after);
   // розыгрыш: форма только при подключенном сервере; заявка уже отправлена – показываем это
   const mailBox = document.getElementById('mailbox');
   mailBox.hidden = !CONFIG.scoresUrl || cheated;
