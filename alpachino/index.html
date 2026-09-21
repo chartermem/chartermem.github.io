@@ -100,7 +100,16 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
 .name{font-family:var(--hud);font-size:12px;padding:12px 14px;background:#1A1A22;color:var(--ink);border:2px solid var(--gold-deep);text-align:center;text-transform:uppercase;width:min(260px,80vw);outline:none;letter-spacing:.06em}
 .name:focus{border-color:var(--gold)}
 .name::placeholder{color:var(--muted)}
-.board{font-family:var(--hud);font-size:9px;line-height:2;color:var(--ink-dim);width:min(360px,88vw);font-variant-numeric:tabular-nums}
+.board{font-family:var(--hud);font-size:9px;line-height:2;color:var(--ink-dim);width:min(360px,88vw);font-variant-numeric:tabular-nums;
+  max-height:min(30vh,300px);overflow-y:auto;overscroll-behavior:contain;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--gold-deep) transparent}
+.board h3{position:sticky;top:0;background:var(--ground);padding:2px 0}
+.touch .screen{gap:12px;padding:20px 16px}
+.touch .sub{font-size:9px;line-height:1.75}
+.touch .tasklist{gap:5px}
+.touch .stats{font-size:10px;line-height:1.9}
+.touch .board{max-height:24vh}
+.touch .mailbox{gap:5px}
+.touch .mailbox .hint{line-height:1.6}
 .board h3{font-size:9px;color:var(--gold);letter-spacing:.14em;margin:0 0 4px;font-weight:400;text-transform:uppercase}
 .board .row{display:grid;grid-template-columns:minmax(0,1fr) 5ch 9ch;gap:10px;text-align:left;white-space:nowrap}
 .board .row span:first-child{overflow:hidden;text-overflow:ellipsis}
