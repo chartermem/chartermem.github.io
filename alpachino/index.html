@@ -119,6 +119,7 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
 .board .row span:last-child{color:var(--gold)}
 .board .me{color:var(--ink);background:rgba(242,176,30,.12)}
 .board .dots{text-align:center;color:var(--muted);letter-spacing:.3em;line-height:1.2}
+.board .mine{position:sticky;bottom:0;background:var(--ground);box-shadow:0 -6px 8px var(--ground)}
 #end-cheat{color:var(--blood)}
 .mailbox{display:flex;flex-direction:column;align-items:center;gap:8px;width:min(360px,88vw)}
 .mailrow{display:flex;gap:8px;align-items:stretch;width:100%}
@@ -389,7 +390,7 @@ function renderBoard(id, me, list) {
   const title = (CONFIG.scoresUrl && !Scores.online ? 'рекорды · нет связи, только этот браузер' : 'рекорды') + (total > 10 ? ' · игроков: ' + total : '');
   const row = (r, n) => '<div class="row' + (r.name === me ? ' me' : '') + '"><span>' + n + '. ' + esc(r.name) + '</span><span>' + (r.won ? 'дожил' : fmt(r.time)) + '</span><span>$' + r.cash + '</span></div>';
   let html = list.length ? list.map((r, i) => row(r, i + 1)).join('') : '<div>пока никого – будь первым</div>';
-  if (me && Scores.me && Scores.me.name === me && Scores.me.rank > 10) html += '<div class="dots">···</div>' + row(Scores.me, Scores.me.rank);
+  if (me && Scores.me && Scores.me.name === me && Scores.me.rank > 10) html += '<div class="mine"><div class="dots">···</div>' + row(Scores.me, Scores.me.rank) + '</div>'; // своя строка прилипает к низу таблицы – крутить до нее не надо
   document.getElementById(id).innerHTML = '<h3>' + title + '</h3>' + html;
 }
 function playerName() {
