@@ -84,7 +84,7 @@ canvas.aim{cursor:none}
 #toast.show{opacity:1;transform:none}
 #toast.star{color:var(--gold);text-shadow:3px 3px 0 var(--blood),0 0 22px rgba(0,0,0,.9)}
 
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px;padding:28px 22px;
+.screen{touch-action:pan-y;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;text-align:center;gap:18px;padding:28px 22px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   background:radial-gradient(ellipse at center,rgba(14,14,18,.84) 0%,rgba(14,14,18,.97) 75%)}
 .kicker{font-family:var(--hud);font-size:10px;color:var(--gold);letter-spacing:.18em;text-transform:uppercase;line-height:1.8}
 h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);line-height:1.15;margin:0;text-transform:uppercase;color:var(--ink);text-shadow:4px 4px 0 var(--blood);text-wrap:balance}
