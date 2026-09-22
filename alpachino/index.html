@@ -1254,27 +1254,43 @@ function roadPath(ax, ay, bx, by) {
   const path = []; for (let i = g; i !== -1; i = par[i]) path.push([i % N, (i / N) | 0]);
   return path.reverse();
 }
+// перекрытия: часть на кратчайшем пути от банка к району, часть на случайных улицах вокруг маршрута – каждый заезд по-разному
 function placeCordons() {
   const path = roadPath(POI.bank.x, POI.bank.y, HOOD_CX, (N - 6) * CELL - CELL);
   if (path.length < 10) return;
-  for (const f of [0.3, 0.55, 0.78]) {
-    let i = Math.round(f * (path.length - 1));
-    for (let k = 0; k < 6; k++, i--) { // ищем прямой участок, не перекресток
+  const used = [];
+  const farEnough = (cx, cy) => used.every(([ux, uy]) => Math.abs(ux - cx) + Math.abs(uy - cy) > 8);
+  const putNear = (i0, span) => { // ищем прямой участок рядом с точкой маршрута
+    for (let k = 0; k < span; k++) for (const i of [i0 - k, i0 + k]) {
       const a = path[i - 1], b = path[i], c = path[i + 1];
-      if (!a || !c || roadLine(b[0]) && roadLine(b[1])) continue;
-      if ((a[0] === c[0]) !== (a[1] === c[1])) { cordonAt(b[0], b[1], Math.sign(c[0] - a[0]), Math.sign(c[1] - a[1])); break; }
+      if (!a || !b || !c || (roadLine(b[0]) && roadLine(b[1])) || !farEnough(b[0], b[1])) continue;
+      if ((a[0] === c[0]) !== (a[1] === c[1])) { cordonAt(b[0], b[1], Math.sign(c[0] - a[0]), Math.sign(c[1] - a[1])); used.push([b[0], b[1]]); return true; }
     }
+    return false;
+  };
+  // 4 на маршруте: доли пути сдвигаются случайно, поэтому места каждый раз новые
+  for (const f of [0.22, 0.42, 0.62, 0.82]) putNear(Math.round((f + rand(-0.06, 0.06)) * (path.length - 1)), 7);
+  // 3 в стороне: случайные улицы недалеко от маршрута – можно нарваться, объезжая пробку
+  for (let n = 0, tries = 0; n < 3 && tries < 60; tries++) {
+    const [px, py] = path[Math.floor(Math.random() * path.length)];
+    const cx = px + Math.round(rand(-9, 9)), cy = py + Math.round(rand(-9, 9));
+    if (!passable(cx, cy) || (roadLine(cx) && roadLine(cy)) || !farEnough(cx, cy)) continue;
+    const vert = roadLine(cx) && !roadLine(cy); // улица идет с севера на юг
+    if (!vert && !(roadLine(cy) && !roadLine(cx))) continue;
+    if (!passable(cx + (vert ? 0 : 1), cy + (vert ? 1 : 0)) || !passable(cx - (vert ? 0 : 1), cy - (vert ? 1 : 0))) continue;
+    cordonAt(cx, cy, vert ? 0 : 1, vert ? 1 : 0); used.push([cx, cy]); n++;
   }
 }
 function cordonAt(cx, cy, dx, dy) {
   const vert = dy !== 0, c0 = vert ? cx - cx % PERIOD : cy - cy % PERIOD; // едем вдоль y – перегораживаем поперек x
-  for (let k = 0; k < 2; k++) {
+  const cars = 1 + Math.floor(Math.random() * 2); // одна-две машины поперек
+  for (let k = 0; k < cars; k++) {
     const off = 24 + k * 48;
     const x = vert ? c0 * CELL + off : (cx + 0.5) * CELL, y = vert ? (cy + 0.5) * CELL : c0 * CELL + off;
     const c = makeCar(x, y, (vert ? 0 : Math.PI / 2) + (k ? -0.22 : 0.22), 'cop'); c.parked = true; c.cordon = true; parked.push(c);
   }
-  for (let k = 0; k < 3; k++) {
-    const off = 18 + k * 30, back = 36;
+  for (let k = 0, men = 2 + Math.floor(Math.random() * 2); k < men; k++) {
+    const off = 18 + k * 30 + rand(-6, 6), back = 36;
     const x = vert ? c0 * CELL + off : (cx + 0.5) * CELL + dx * back, y = vert ? (cy + 0.5) * CELL + dy * back : c0 * CELL + off;
     peds.push({ x, y, li: 0, lj: 0, dir: 0, vel: 0, tx: x, ty: y, skin: '#D9B48F', cloth: '#1F3A93', dead: false, cop: true, post: true, hp: 1, cd: rand(0.4, 1.2), r: 7, speed: 0, aim: Math.atan2(-dy, -dx), stop: 0 });
   }
