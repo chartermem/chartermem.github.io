@@ -2171,6 +2171,7 @@ function updateRoom(dt) {
     hero.cd -= dt;
     const aim = fireInput();
     if (aim !== null && !bankWait) { hero.angle = aim; if (weapon) fireWeapon(aim); else punchRoom(aim); }
+    if (hero.punchT > 0) hero.punchT -= dt; // иначе кадр удара залипает и человек перестает шагать
   }
   if (hero.dead) hero.fall = Math.min(1, hero.fall + dt * 2);
 
