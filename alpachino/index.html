@@ -319,7 +319,7 @@ const CONFIG = {
     exit:  [{ t: 0, n: 4 }, { t: 4, n: 4 }, { t: 8, n: 5 }, { t: 12, n: 5 }],
     stand: [{ t: 0, n: 6 }, { t: 4, n: 7 }, { t: 8, n: 8 }, { t: 12, n: 9 }, { t: 16, n: 10 }, { t: 20, n: 11 }, { t: 24, n: 12 }, { t: 28, n: 12 }], // на машинах; плюс с каждой волной пешие с улиц
   },
-  pushDist: 200,           // сколько пацанам дотолкать машину у банка, чтобы завелась (px)
+  pushDist: 320,           // сколько дотолкать машину у банка, чтобы завелась (px); встань сзади – толкаешь сам
   copsPerStar: [0, 1, 2, 3, 5, 7],   // сколько машин гонится при каждом уровне розыска
   patrols: 2,                        // сколько патрулей просто катается по городу
 };
@@ -1039,7 +1039,7 @@ function reset() {
   cops = []; civs = []; peds = []; particles = []; flashes = []; bills = [];
   t = 0; cash = 0; sceneIdx = -1; scene = null; lyricIdx = 0;
   starsAuto = 0; starsCrime = 0; heat = 0;
-  stat = { peds: 0, guards: 0, cops: 0, swat: 0, bags: 0 }; weaponBought = false;
+  stat = { peds: 0, guards: 0, cops: 0, swat: 0, bags: 0 }; weaponBought = false; pushCued = false;
   crew = 0; brosT = -1; arrived = false; objective = null; stalled = false; weapon = null; cityBullets = []; atBank = false; tasksOpen = false;
   copHeat = false; pedHits = 0; ramCd = 0; wantedCued = false; killCued = false; prevStars = 0;
   POI.bros = pickBroSpots(); // каждый заезд пацаны ждут в разных местах
@@ -1125,6 +1125,7 @@ function enterScene(idx, hard) {
     room.doorLocked = false; room.waveIdx = 0; room.phase = 'exit'; arrived = false; stalled = false;
     for (const d of room.doors) explode(d.x, d.y, 30, '#FF6A2B'); // выносим входные двери
     room.carDist = roomDistTo(room.car.x, room.car.y); // поле расстояний до машины – по нему бегут пацаны
+    pushCued = false;
     for (const a of room.allies) a.toCar = true;
     setObjective(room.car, 'На улицу – прикрывай пацанов у тачки', AT('chase'));
   }
@@ -1149,7 +1150,7 @@ function enterScene(idx, hard) {
   }
   room && (room.waveIdx = 0);
 }
-let taskTimer = null;
+let taskTimer = null, pushCued = false; // подсказка «толкаем» – один раз за заезд
 // p – куда ехать/идти (null – просто текст), dl – дедлайн в секундах песни (база), 0 – без дедлайна
 function setObjective(p, text, dl) {
   objective = p ? { x: p.x, y: p.y, dl: dl || 0 } : null; objText = text; document.getElementById('obj').textContent = text;
@@ -1187,7 +1188,9 @@ function buyWeapon(key) {
   const w = CONFIG.weapons[key];
   if (weapon === key) { toast('Уже у тебя'); return; }
   if (cash < w.price) { toast('Не хватает $' + (w.price - cash)); return; }
-  cash -= w.price; weapon = key; weaponBought = true; toast(w.name + ' куплен'); cue('Заряжай рок-н-ролл!');
+  cash -= w.price; weapon = key; toast(w.name + ' куплен');
+  if (!weaponBought) cue('Заряжай рок-н-ролл!'); // только при первой покупке
+  weaponBought = true;
   setObjective(null, 'Теперь к двери');
 }
 
@@ -1756,6 +1759,9 @@ function updateCity(dt) {
     if (inp.vx || inp.vy) { hero.stepT = (hero.stepT || 0) - dt; if (hero.stepT <= 0) { hero.stepT = 0.34; sfx.step(); } }
     if (inp.vx || inp.vy) hero.angle = Math.atan2(inp.vy, inp.vx);
     hero.speed = 0; collideBuildings(hero);
+    // людей нельзя проходить насквозь: расталкиваемся со всеми, кто на ногах – пацаны, прохожие, копы
+    for (const b of crewList) if (b.state !== 'in') separate(hero, b);
+    for (const q of peds) { if (q.dead || q.ko > 0) continue; if (q.r === undefined) q.r = 7; separate(hero, q); }
     hero.cd -= dt;
     // припаркованные и своя тачка не пропускают сквозь себя
     for (const pc of [player, ...parked]) { const d = Math.hypot(hero.x - pc.x, hero.y - pc.y); if (d < pc.r + hero.r && d > 0) { hero.x = pc.x + (hero.x - pc.x) / d * (pc.r + hero.r); hero.y = pc.y + (hero.y - pc.y) / d * (pc.r + hero.r); } }
@@ -2186,7 +2192,9 @@ function updateRoom(dt) {
     }
     // машина
     if (objective && !arrived && room.car && carStarted && Math.hypot(hero.x - room.car.x, hero.y - room.car.y) < 34) { arrived = true; boardAndGo(); return; }
-    if (room.phase === 'exit' && !carStarted && !room.allies.some(a => !a.dead) && playing && !DEBUG) crewDead();
+    if (room.phase === 'exit' && !carStarted && !stalled && room.car && playing && !room.allies.some(a => !a.dead)) { // пацанов нет – толкаешь сам
+      stalled = true; pushFrom = room.car.x; setObjective(objective, 'Толкай сам – встань за тачкой', AT('chase'));
+    }
     // стрельба – сам, куда целишься
     hero.cd -= dt;
     const aim = fireInput();
@@ -2249,10 +2257,14 @@ function updateRoom(dt) {
   // пацаны толкают машину вдоль улицы; сколько живых – такая и скорость
   if (pushing && playing) {
     const alive = room.allies.filter(a => a.pushing && !a.dead);
-    room.car.x = Math.min((room.w - 2.5) * TILE, room.car.x + 22 * alive.length * dt);
-    if (!alive.length && !room.allies.some(a => !a.dead && a.toCar) && playing && !DEBUG) crewDead();
-    else if (room.car.x - pushFrom >= CONFIG.pushDist) { // дотолкали – завелась: пацаны внутрь, ты садись
-      carStarted = true; stalled = false; toast('Завелась!'); sfx.rev();
+    // встал сзади машины – толкаешь вместе с ними; один ты медленнее, но в одиночку дотолкать реально
+    const meBehind = !hero.dead && !hero.stun && hero.x < room.car.x - 12 && hero.x > room.car.x - 46 && Math.abs(hero.y - room.car.y) < 22;
+    hero.pushing = meBehind;
+    const force = 16 * alive.length + (meBehind ? 13 : 0);
+    room.car.x = Math.min((room.w - 2.5) * TILE, room.car.x + force * dt);
+    if (meBehind) { hero.x = room.car.x - 26; hero.angle = 0; if (!pushCued) { pushCued = true; toast('Толкаем!'); } }
+    if (room.car.x - pushFrom >= CONFIG.pushDist) { // дотолкали – завелась: пацаны внутрь, ты садись
+      carStarted = true; stalled = false; hero.pushing = false; toast('Завелась!'); sfx.rev();
       for (const a of room.allies) { a.pushing = false; a.inCar = true; }
       setObjective(room.car, 'Садись – завелась', AT('chase')); arrived = false;
     }
@@ -2264,7 +2276,7 @@ function updateRoom(dt) {
     if (!playing) continue;
     if (a.toCar && room.car) { // бежит к машине; добежал – толкает
       const dc = Math.hypot(room.car.x - a.x, room.car.y - a.y);
-      if (dc < 40) { a.pushing = true; a.toCar = false; a.hp = Math.max(a.hp, 160); if (!stalled) { stalled = true; pushFrom = room.car.x; setObjective(objective, 'Пацаны толкают – прикрывай', AT('chase')); } continue; }
+      if (dc < 40) { a.pushing = true; a.toCar = false; a.hp = Math.max(a.hp, 160); if (!stalled) { stalled = true; pushFrom = room.car.x; setObjective(objective, 'Пацаны толкают – помогай сзади', AT('chase')); } continue; }
       const tgt = fieldStepOn(room.carDist, a);
       const dx = tgt.x - a.x, dy = tgt.y - a.y, l = Math.hypot(dx, dy) || 1;
       a.x += dx / l * 160 * dt; a.y += dy / l * 160 * dt; a.angle = Math.atan2(dy, dx);
@@ -2294,7 +2306,7 @@ function updateRoom(dt) {
       for (const e of room.enemies) {
         if (e.dead || Math.hypot(e.x - b.x, e.y - b.y) > e.r) continue;
         e.hp -= b.dmg; blood(b.x, b.y, 3); gone = true;
-        if (e.hp <= 0) { e.dead = true; e.fall = 0; blood(e.x, e.y, 16); if (e.kind === 'guard') stat.guards++; else if (e.kind === 'swat') stat.swat++; else stat.cops++; }
+        if (e.hp <= 0) { e.dead = true; e.fall = 0; blood(e.x, e.y, 16); if (e.kind === 'guard') stat.guards++; else if (e.kind === 'swat') stat.swat++; else stat.cops++; payout(e.x, e.y, (e.kind === 'guard' ? 150 : 200) + 10 * Math.floor(Math.random() * 11)); }
         break;
       }
       if (!gone) for (const h of room.hostages) {
