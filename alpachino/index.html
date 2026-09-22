@@ -350,7 +350,7 @@ const SCORES_KEY = 'alp-scores', NAME_KEY = 'alp-name';
 const ID_KEY = 'alp-id';
 const playerId = (() => { try { let id = localStorage.getItem(ID_KEY); if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem(ID_KEY, id); } return id; } catch (e) { return ''; } })();
 const Scores = {
-  online: false, // true – последний ответ пришел с сервера
+  online: false, tried: false, // online – последний ответ пришел с сервера; tried – хотя бы один запрос уже завершился
   load() { try { return JSON.parse(localStorage.getItem(SCORES_KEY) || '[]'); } catch (e) { return []; } },
   save(list) { try { localStorage.setItem(SCORES_KEY, JSON.stringify(list.slice(0, 20))); } catch (e) {} },
   rank: (a, b) => (b.won - a.won) || (b.cash - a.cash) || (b.time - a.time), // выжившие выше, потом касса, потом сколько продержался
@@ -366,16 +366,16 @@ const Scores = {
     return d;
   },
   total: 0, me: null, // сколько всего игроков и моя строка с местом (с сервера; локально считаем сами)
-  take(d) { this.online = true; this.save(d.list); this.total = d.total || d.list.length; this.me = d.me || null; return d.list; },
+  take(d) { this.online = true; this.tried = true; this.save(d.list); this.total = d.total || d.list.length; this.me = d.me || null; return d.list; },
   localMe(name) { const list = this.load(), i = list.findIndex(r => r.name === name); this.total = list.length; this.me = i >= 0 ? Object.assign({ rank: i + 1 }, list[i]) : null; return list; },
   async fetch(name) {
     if (!CONFIG.scoresUrl) return this.localMe(name);
-    try { return this.take(await this.api(null, name)); } catch (e) { this.online = false; return this.localMe(name); }
+    try { return this.take(await this.api(null, name)); } catch (e) { this.online = false; this.tried = true; return this.localMe(name); }
   },
   async submit(rec) {
     const local = this.local(rec);
     if (!CONFIG.scoresUrl) return this.localMe(rec.name);
-    try { return this.take(await this.api(Object.assign({ action: 'score', id: playerId }, rec))); } catch (e) { this.online = false; return this.localMe(rec.name); }
+    try { return this.take(await this.api(Object.assign({ action: 'score', id: playerId }, rec))); } catch (e) { this.online = false; this.tried = true; return this.localMe(rec.name); }
   },
   async email(email, rec) {
     if (!CONFIG.scoresUrl) throw new Error('offline');
@@ -387,7 +387,7 @@ const esc = str => String(str).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&l
 function renderBoard(id, me, list) {
   list = (list || Scores.load()).slice(0, 10);
   const total = Math.max(Scores.total, list.length);
-  const title = (CONFIG.scoresUrl && !Scores.online ? 'рекорды · нет связи, только этот браузер' : 'рекорды') + (total > 10 ? ' · игроков: ' + total : '');
+  const title = (CONFIG.scoresUrl && !Scores.online ? (Scores.tried ? 'рекорды · нет связи, только этот браузер' : 'рекорды · загружаю…') : 'рекорды') + (total > 10 ? ' · игроков: ' + total : '');
   const row = (r, n) => '<div class="row' + (r.name === me ? ' me' : '') + '"><span>' + n + '. ' + esc(r.name) + '</span><span>' + (r.won ? 'дожил' : fmt(r.time)) + '</span><span>$' + r.cash + '</span></div>';
   let html = list.length ? list.map((r, i) => row(r, i + 1)).join('') : '<div>пока никого – будь первым</div>';
   if (me && Scores.me && Scores.me.name === me && Scores.me.rank > 10) html += '<div class="mine"><div class="dots">···</div>' + row(Scores.me, Scores.me.rank) + '</div>'; // своя строка прилипает к низу таблицы – крутить до нее не надо
@@ -399,7 +399,11 @@ function playerName() {
   return n;
 }
 try { document.getElementById('pname').value = localStorage.getItem(NAME_KEY) || ''; } catch (e) {}
-renderBoard('board-start'); Scores.fetch(localStorage.getItem(NAME_KEY) || '').then(list => renderBoard('board-start', localStorage.getItem(NAME_KEY) || '', list));
+renderBoard('board-start');
+(function loadBoard(attempt) {
+  const nm = localStorage.getItem(NAME_KEY) || '';
+  Scores.fetch(nm).then(list => { renderBoard('board-start', nm, list); if (!Scores.online && CONFIG.scoresUrl && attempt < 2) setTimeout(() => loadBoard(attempt + 1), 4000); });
+})(0);
 let cheatBuf = '';       // набор чит-кода с клавиатуры
 
 // ============================================================
