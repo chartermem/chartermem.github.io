@@ -1127,7 +1127,7 @@ function enterScene(idx, hard) {
     room.carDist = roomDistTo(room.car.x, room.car.y); // поле расстояний до машины – по нему бегут пацаны
     pushCued = false;
     for (const a of room.allies) a.toCar = true;
-    setObjective(room.car, 'На улицу – прикрывай пацанов у тачки', AT('chase'));
+    setObjective(room.car, 'На улицу – прикрывай пацанов у тачки');
   }
   if (id === 'chase' && !arrived) {
     if (mode !== 'drive') boardAndGo(); // если еще в банке (режим отладки) – выезжаем сейчас
@@ -2193,7 +2193,7 @@ function updateRoom(dt) {
     // машина
     if (objective && !arrived && room.car && carStarted && Math.hypot(hero.x - room.car.x, hero.y - room.car.y) < 34) { arrived = true; boardAndGo(); return; }
     if (room.phase === 'exit' && !carStarted && !stalled && room.car && playing && !room.allies.some(a => !a.dead)) { // пацанов нет – толкаешь сам
-      stalled = true; pushFrom = room.car.x; setObjective(objective, 'Толкай сам – встань за тачкой', AT('chase'));
+      stalled = true; pushFrom = room.car.x; setObjective(objective, 'Толкай сам – встань за тачкой');
     }
     // стрельба – сам, куда целишься
     hero.cd -= dt;
@@ -2266,7 +2266,7 @@ function updateRoom(dt) {
     if (room.car.x - pushFrom >= CONFIG.pushDist) { // дотолкали – завелась: пацаны внутрь, ты садись
       carStarted = true; stalled = false; hero.pushing = false; toast('Завелась!'); sfx.rev();
       for (const a of room.allies) { a.pushing = false; a.inCar = true; }
-      setObjective(room.car, 'Садись – завелась', AT('chase')); arrived = false;
+      setObjective(room.car, 'Садись – завелась'); arrived = false;
     }
     alive.forEach((a, i) => { a.x = room.car.x - 24 - (i >> 1) * 14; a.y = room.car.y + (i % 2 ? 9 : -9); a.angle = 0; });
   }
@@ -2276,7 +2276,7 @@ function updateRoom(dt) {
     if (!playing) continue;
     if (a.toCar && room.car) { // бежит к машине; добежал – толкает
       const dc = Math.hypot(room.car.x - a.x, room.car.y - a.y);
-      if (dc < 40) { a.pushing = true; a.toCar = false; a.hp = Math.max(a.hp, 160); if (!stalled) { stalled = true; pushFrom = room.car.x; setObjective(objective, 'Пацаны толкают – помогай сзади', AT('chase')); } continue; }
+      if (dc < 40) { a.pushing = true; a.toCar = false; a.hp = Math.max(a.hp, 160); if (!stalled) { stalled = true; pushFrom = room.car.x; setObjective(objective, 'Пацаны толкают – помогай сзади'); } continue; }
       const tgt = fieldStepOn(room.carDist, a);
       const dx = tgt.x - a.x, dy = tgt.y - a.y, l = Math.hypot(dx, dy) || 1;
       a.x += dx / l * 160 * dt; a.y += dy / l * 160 * dt; a.angle = Math.atan2(dy, dx);
@@ -2306,7 +2306,7 @@ function updateRoom(dt) {
       for (const e of room.enemies) {
         if (e.dead || Math.hypot(e.x - b.x, e.y - b.y) > e.r) continue;
         e.hp -= b.dmg; blood(b.x, b.y, 3); gone = true;
-        if (e.hp <= 0) { e.dead = true; e.fall = 0; blood(e.x, e.y, 16); if (e.kind === 'guard') stat.guards++; else if (e.kind === 'swat') stat.swat++; else stat.cops++; payout(e.x, e.y, (e.kind === 'guard' ? 150 : 200) + 10 * Math.floor(Math.random() * 11)); }
+        if (e.hp <= 0) { e.dead = true; e.fall = 0; blood(e.x, e.y, 16); if (e.kind === 'guard') stat.guards++; else if (e.kind === 'swat') stat.swat++; else stat.cops++; payout(e.x, e.y, e.kind === 'guard' ? 10 : 20); } // в помещении за головы платят символически
         break;
       }
       if (!gone) for (const h of room.hostages) {
@@ -3589,11 +3589,12 @@ function hud(dt) {
   el.cash.innerHTML = '$' + cash + (weapon ? ' · <i class="ic w-' + weapon + '"></i>' + CONFIG.weapons[weapon].name : '');
   // сколько осталось на задание: свой дедлайн, иначе – до следующей сцены, в финале – до конца песни
   const nxt = CONFIG.scenes[sceneIdx + 1];
+  const exitPhase = mode === 'room' && room && room.phase === 'exit'; // выход из банка – без счетчика, ограничение только по сюжету
   const dl = objective && objective.dl ? objective.dl * TS() : tasksOpen ? CONFIG.tasksUntil * TS() : (nxt ? nxt.at * TS() : CONFIG.duration);
   const C = CONFIG.taskColors, names = { car: 'Угнать спорткар', gun: 'Купить ствол', bros: 'Забрать пацанов' };
   el.tasks.innerHTML = tasksOpen && state === 'play' ? Object.keys(tasks).map(k => '<div class="' + (tasks[k] ? 'done' : '') + '"><i class="ic ' + (k === 'bros' ? 'bro' : k) + '"></i>' + names[k] + (k === 'bros' && !tasks.bros ? ' ' + crew + '/2' : '') + '</div>').join('') : '';
   const left = Math.max(0, dl - t);
-  el.timer.textContent = state === 'play' && (objText || tasksOpen) ? (left < 10 ? left.toFixed(1) : fmt(left)) : '';
+  el.timer.textContent = state === 'play' && !exitPhase && (objText || tasksOpen) ? (left < 10 ? left.toFixed(1) : fmt(left)) : '';
   el.timer.classList.toggle('low', left < 5);
   // ключевые моменты – счетчик крупно по центру
   const big = document.getElementById('bigtimer');
