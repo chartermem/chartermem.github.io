@@ -1004,6 +1004,22 @@ document.getElementById('hint').innerHTML = TOUCH
     + '<div><span class="key">ЛКМ</span><span class="cap">бить · стрелять</span></div>'
     + '</div>';
 
+// пацаны: два случайных квартала из набора, на южном тротуаре, к ним подъезд с улицы снизу; не рядом друг с другом
+const BRO_BLOCKS = [[5, 2], [0, 2], [2, 1], [6, 4], [1, 5], [4, 6], [7, 3], [3, 0], [6, 1], [0, 4], [5, 5], [2, 3]];
+function pickBroSpots() {
+  const spots = [];
+  for (const [bx, by] of BRO_BLOCKS) {
+    const X0 = ROADW + bx * PERIOD, Y0 = ROADW + by * PERIOD, cx = X0 + 1 + Math.floor(Math.random() * 2), cy = Y0 + 4;
+    if (typeAt(cx, cy) !== T_ROAD || typeAt(cx, cy - 1) === T_ALLEY) continue; // внизу должна быть улица
+    const x = (cx + 0.5) * CELL + rand(-12, 12);
+    spots.push({ bx, by, x, y: cy * CELL - WALK / 2, m: { x, y: (cy + 0.5) * CELL } });
+  }
+  for (let i = spots.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [spots[i], spots[j]] = [spots[j], spots[i]]; }
+  const out = [spots[0]];
+  for (const q of spots.slice(1)) { if (Math.abs(q.bx - out[0].bx) + Math.abs(q.by - out[0].by) >= 3) { out.push(q); break; } }
+  if (out.length < 2) out.push(spots[1]);
+  return out.map(q => ({ x: q.x, y: q.y, m: q.m, taken: false }));
+}
 function reset() {
   // спорткар у автосалона – его и надо угнать; на кольце и на парковках по городу – обычные машины
   player = makeCar(POI.dealer.x, POI.dealer.y, POI.dealer.a, 'player', 'sport'); player.color = '#F2B01E'; player.unique = true; player.hp = player.maxHp = 200 * CAR_HP_K; // бронированный: от погони уходит только он
@@ -1026,7 +1042,7 @@ function reset() {
   stat = { peds: 0, guards: 0, cops: 0, swat: 0, bags: 0 }; weaponBought = false;
   crew = 0; brosT = -1; arrived = false; objective = null; stalled = false; weapon = null; cityBullets = []; atBank = false; tasksOpen = false;
   copHeat = false; pedHits = 0; ramCd = 0; wantedCued = false; killCued = false; prevStars = 0;
-  for (const b of POI.bros) b.taken = false;
+  POI.bros = pickBroSpots(); // каждый заезд пацаны ждут в разных местах
   fade = { a: 0, dir: 0, next: -1 }; endTimer = 0; deathT = 0;
   cam.x = player.x; cam.y = player.y; zoom = ZOOM_BASE;
   for (let i = 0; i < 2; i++) spawnStash('cash', true);
