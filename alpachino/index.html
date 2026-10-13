@@ -1578,7 +1578,7 @@ canvas.addEventListener('pointerup', stickUp);
 canvas.addEventListener('pointercancel', stickUp);
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 let btnMode = 'enter', fireHold = false;
-document.getElementById('btn-act').addEventListener('pointerdown', e => { e.preventDefault(); if (state !== 'play') return; if (btnMode === 'fire' || btnMode === 'punch') fireHold = true; else actQueued = true; });
+document.getElementById('btn-act').addEventListener('pointerdown', e => { e.preventDefault(); if (state !== 'play' || btnMode === 'push') return; if (btnMode === 'fire' || btnMode === 'punch') fireHold = true; else actQueued = true; });
 for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) document.getElementById('btn-act').addEventListener(ev, () => { fireHold = false; });
 
 function driveInput() {
@@ -2212,7 +2212,6 @@ function updateRoom(dt) {
   const waves = CONFIG.waves[scene.id === 'exit' ? 'exit' : room.name];
   const local = (t - sceneStart) / TS();
   const pushing = room.name === 'bank' && stalled && !!room.car; // выход из банка: пацаны толкают тачку
-  let roomAim = null;            // куда целится игрок в этом кадре; пока целится – толкание не разворачивает его
 
   // волны
   if (playing && !cutscene && !bankWait && waves && room.waveIdx < waves.length && local >= waves[room.waveIdx].t) {
@@ -2251,8 +2250,9 @@ function updateRoom(dt) {
     }
     // стрельба – сам, куда целишься
     hero.cd -= dt;
-    const aim = fireInput();
-    if (aim !== null && !bankWait) { roomAim = aim; hero.angle = aim; if (weapon) fireWeapon(aim); else punchRoom(aim); }
+    // толкаешь тачку – руки заняты: ни стрелять, ни бить. Хочешь отстреливаться – отойди, но пацаны покатят медленнее
+    const aim = hero.pushing ? null : fireInput();
+    if (aim !== null && !bankWait) { hero.angle = aim; if (weapon) fireWeapon(aim); else punchRoom(aim); }
     if (hero.punchT > 0) hero.punchT -= dt; // иначе кадр удара залипает и человек перестает шагать
   }
   if (hero.dead) hero.fall = Math.min(1, hero.fall + dt * 2);
@@ -2316,15 +2316,14 @@ function updateRoom(dt) {
     hero.pushing = meBehind;
     const force = 16 * alive.length + (meBehind ? 13 : 0);
     room.car.x = Math.min((room.w - 2.5) * TILE, room.car.x + force * dt);
-    // толкает – значит стоит за тачкой, но отстреливаться при этом можно: пока целится, разворот не трогаем
-    if (meBehind) { hero.x = room.car.x - 26; if (roomAim === null) hero.angle = 0; if (!pushCued) { pushCued = true; toast('Толкаем – отстреливайся!'); } }
+    if (meBehind) { hero.x = room.car.x - 26; hero.angle = 0; if (!pushCued) { pushCued = true; toast('Толкаем – руки заняты!'); } }
     if (room.car.x - pushFrom >= CONFIG.pushDist) { // дотолкали – завелась: пацаны внутрь, ты садись
       carStarted = true; stalled = false; hero.pushing = false; toast('Завелась!'); sfx.rev();
       for (const a of room.allies) { a.pushing = false; a.inCar = true; }
       setObjective(room.car, 'Садись – завелась'); arrived = false;
     }
     alive.forEach((a, i) => { a.x = room.car.x - 24 - (i >> 1) * 14; a.y = room.car.y + (i % 2 ? 9 : -9); a.angle = 0; });
-  }
+  } else if (hero.pushing) hero.pushing = false; // вышли из сцены толкания – иначе флаг залипнет и огонь останется запрещен
   for (const a of room.allies) {
     if (a.dead) { a.fall = Math.min(1, a.fall + dt * 2); continue; }
     if (a.pushing || a.inCar) continue;
@@ -2468,10 +2467,11 @@ function update(dt) {
   canvas.classList.toggle('aim', mode !== 'drive' && state === 'play');
   const inShop = mode === 'room' && room && room.name === 'shop';
   const nearCar = mode === 'walk' && hero && [player, ...parked, ...civs].some(c => Math.hypot(c.x - hero.x, c.y - hero.y) < 48);
-  btnMode = inShop ? 'buy' : mode === 'drive' ? 'exit' : nearCar ? 'enter' : weapon ? 'fire' : 'punch';
+  const pushNow = mode === 'room' && hero && hero.pushing; // толкает – кнопка огня не нужна, руки заняты
+  btnMode = inShop ? 'buy' : mode === 'drive' ? 'exit' : pushNow ? 'push' : nearCar ? 'enter' : weapon ? 'fire' : 'punch';
   const btn = document.getElementById('btn-act');
   btn.hidden = !(state === 'play' && TOUCH && !cutscene && !bankWait);
-  btn.textContent = { buy: 'купить', exit: 'выйти', enter: 'в тачку', fire: 'огонь', punch: 'удар' }[btnMode];
+  btn.textContent = { buy: 'купить', exit: 'выйти', enter: 'в тачку', fire: 'огонь', punch: 'удар', push: 'толкаю' }[btnMode];
   btn.classList.toggle('fire', btnMode === 'fire' || btnMode === 'punch');
   if (btnMode !== 'fire' && btnMode !== 'punch') fireHold = false;
 
