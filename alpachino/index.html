@@ -98,6 +98,13 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
 .sound .ic{flex:none;animation:sndpulse 1.5s ease-in-out infinite}
 .sound-hint{max-width:min(34ch,100%);margin:-10px 0 0;font-family:var(--hud);font-size:8px;line-height:2;letter-spacing:.04em;color:var(--muted)}
 .only-touch{display:none} .touch .only-touch{display:inline}
+/* площадки: у каждой свой цвет, чтобы различались с одного взгляда */
+.plats-title{font-family:var(--hud);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:-8px 0 0}
+.plats{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:min(44ch,100%);margin-top:-6px}
+.plat{font-family:var(--hud);font-size:8px;line-height:1;letter-spacing:.04em;text-transform:uppercase;color:var(--c);border:2px solid var(--c);background:#14141A;padding:10px 11px;text-decoration:none;white-space:nowrap}
+.plat:active{transform:translateY(2px)}
+.plat.all{--c:var(--gold);color:#14141A;background:var(--gold)}
+.desktop .plat{font-size:9px;padding:11px 13px}
 @keyframes sndpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
 .btn{font-family:var(--hud);font-size:12px;line-height:1.4;padding:16px 22px;background:var(--gold);color:#14141A;border:0;cursor:pointer;box-shadow:0 5px 0 var(--gold-deep);text-transform:uppercase;letter-spacing:.04em}
 .btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--gold-deep)}
@@ -205,6 +212,8 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
   <input id="pname" class="name" maxlength="14" placeholder="ТВОЕ ИМЯ" autocomplete="off" spellcheck="false">
   <button class="btn" id="btn-start">Заряжай рок-н-ролл</button>
   <div class="board" id="board-start"></div>
+  <p class="plats-title">Пока не начал – послушай остальное</p>
+  <div class="plats" id="plats-start"></div>
   <div class="hint" id="hint-sound">M – звук вкл / выкл</div>
   <div class="hint" id="hint"></div>
   <div class="note" id="note"></div>
@@ -224,6 +233,8 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
   </div>
   <button class="btn" id="btn-again">Еще раз</button>
   <a class="link" id="end-link" href="#" target="_blank" rel="noopener"></a>
+  <p class="plats-title">Остальные песни чартера</p>
+  <div class="plats" id="plats-end"></div>
 </div>
 
 <script>
@@ -237,7 +248,19 @@ const qs = new URLSearchParams(location.search);
 const CONFIG = {
   audioSrc: 'alpachino.mp3',              // положить рядом с index.html; нет файла – игра идет по таймеру
   duration: Number(qs.get('d')) || 188.2, // секунд; заменится длительностью трека, ?d=60 для быстрых тестов
-  presaveUrl: 'https://band.link/',       // TODO: ссылка BandLink на пресейв
+  presaveUrl: 'https://band.link/',       // TODO: ссылка BandLink на пресейв «Альпачино»
+  // Что уже вышло – ссылки из закрепа @charterbusinessclass (сверено с tiktok-uploader/links.py).
+  // Поменяется закреп – править и там, и здесь.
+  allMusicUrl: 'https://band.link/charterband',
+  platforms: [
+    { name: 'Яндекс Музыка', color: '#FFD23F', url: 'https://music.yandex.ru/artist/19424266' },
+    { name: 'VK Музыка',     color: '#5AA9FF', url: 'https://vk.com/artist/charter_mty4njkzmju2nw' },
+    { name: 'Spotify',       color: '#1DB954', url: 'https://open.spotify.com/artist/7N3LExFHS57cmUFYNzet6w' },
+    // адрес с percent-кодировкой имени – как в закрепе: у Apple ссылка без слага идет редиректом
+    { name: 'Apple Music',   color: '#FF5C70', url: 'https://music.apple.com/ru/artist/%D1%87%D0%B0%D1%80%D1%82%D0%B5%D1%80/1689936702' },
+    { name: 'Звук',          color: '#C07BFF', url: 'https://zvuk.com/artist/212574577' },
+    { name: 'КИОН Музыка',   color: '#FF4D6D', url: 'https://music.mts.ru/artist/19424266' },
+  ],
   scoresUrl: 'https://script.google.com/macros/s/AKfycby6ldq5_ToSCJkHPylMCkdSasVCG0jseoZfbdzQMmgOdwZXlj6bthDQ4XlwXAH2PGpP/exec', // веб-приложение Apps Script (server/Code.gs); пусто – рекорды только в этом браузере
   releaseDate: '19 ноября',
   // Разметка по «Альпачино - Demo - 1.wav» (3:09.7), расшифровка 19.09.2026.
@@ -2189,6 +2212,7 @@ function updateRoom(dt) {
   const waves = CONFIG.waves[scene.id === 'exit' ? 'exit' : room.name];
   const local = (t - sceneStart) / TS();
   const pushing = room.name === 'bank' && stalled && !!room.car; // выход из банка: пацаны толкают тачку
+  let roomAim = null;            // куда целится игрок в этом кадре; пока целится – толкание не разворачивает его
 
   // волны
   if (playing && !cutscene && !bankWait && waves && room.waveIdx < waves.length && local >= waves[room.waveIdx].t) {
@@ -2228,7 +2252,7 @@ function updateRoom(dt) {
     // стрельба – сам, куда целишься
     hero.cd -= dt;
     const aim = fireInput();
-    if (aim !== null && !bankWait) { hero.angle = aim; if (weapon) fireWeapon(aim); else punchRoom(aim); }
+    if (aim !== null && !bankWait) { roomAim = aim; hero.angle = aim; if (weapon) fireWeapon(aim); else punchRoom(aim); }
     if (hero.punchT > 0) hero.punchT -= dt; // иначе кадр удара залипает и человек перестает шагать
   }
   if (hero.dead) hero.fall = Math.min(1, hero.fall + dt * 2);
@@ -2292,7 +2316,8 @@ function updateRoom(dt) {
     hero.pushing = meBehind;
     const force = 16 * alive.length + (meBehind ? 13 : 0);
     room.car.x = Math.min((room.w - 2.5) * TILE, room.car.x + force * dt);
-    if (meBehind) { hero.x = room.car.x - 26; hero.angle = 0; if (!pushCued) { pushCued = true; toast('Толкаем!'); } }
+    // толкает – значит стоит за тачкой, но отстреливаться при этом можно: пока целится, разворот не трогаем
+    if (meBehind) { hero.x = room.car.x - 26; if (roomAim === null) hero.angle = 0; if (!pushCued) { pushCued = true; toast('Толкаем – отстреливайся!'); } }
     if (room.car.x - pushFrom >= CONFIG.pushDist) { // дотолкали – завелась: пацаны внутрь, ты садись
       carStarted = true; stalled = false; hero.pushing = false; toast('Завелась!'); sfx.rev();
       for (const a of room.allies) { a.pushing = false; a.inCar = true; }
@@ -3599,6 +3624,18 @@ function leaveSplash() {
   sp.hidden = true; document.getElementById('screen-start').hidden = false;
   sfx.unlock(); sfx.menu(true);
 }
+// кнопки площадок одинаковые на обоих экранах – собираем из CONFIG.platforms, чтобы ссылки лежали в одном месте
+function renderPlatforms() {
+  const link = (url, text, cls, color) => '<a class="plat' + (cls ? ' ' + cls : '') + '"' +
+    (color ? ' style="--c:' + color + '"' : '') + ' href="' + url + '" target="_blank" rel="noopener">' + text + '</a>';
+  const html = CONFIG.platforms.map(p => link(p.url, p.name, '', p.color)).join('') +
+    link(CONFIG.allMusicUrl, 'все площадки', 'all');
+  for (const id of ['plats-start', 'plats-end']) {
+    const box = document.getElementById(id);
+    if (box) box.innerHTML = html;
+  }
+}
+renderPlatforms();
 document.getElementById('screen-splash').addEventListener('pointerdown', leaveSplash);
 window.addEventListener('keydown', () => { if (state === 'start') leaveSplash(); });
 audio.addEventListener('ended', () => { if (state === 'finale') sfx.menu(true); });
