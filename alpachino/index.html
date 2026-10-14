@@ -405,25 +405,26 @@ const playerId = (() => { try { let id = localStorage.getItem(ID_KEY); if (!id) 
 // ---------- Яндекс Игры ----------
 // Один и тот же файл работает и на сайте, и в каталоге Яндекса. Если /sdk.js на странице нет,
 // YA.on остается false и игра ведет себя как раньше. Подключение SDK добавляет build_yandex.py.
+// /sdk.js подключен в <head> обычным тегом, то есть выполняется раньше нашего кода –
+// значит про каталог мы знаем сразу, не дожидаясь ответа init(). Ждать нельзя: от этого
+// зависит, видны ли внешние ссылки, а они в каталоге запрещены.
+const ON_YANDEX = !!window.YaGames;
+if (ON_YANDEX) document.documentElement.classList.add('ya');
 const YA = {
-  on: false, sdk: null, board: 'alpachino', adBusy: false, revived: false,
+  on: ON_YANDEX, sdk: null, board: 'alpachino', adBusy: false, revived: false,
   async init() {
-    if (!window.YaGames) return;
-    try {
-      this.sdk = await YaGames.init();
-      this.on = true;
-      document.documentElement.classList.add('ya');   // прячет внешние ссылки: в каталоге они запрещены
-    } catch (e) { this.on = false; }
+    if (!ON_YANDEX) return;
+    try { this.sdk = await YaGames.init(); } catch (e) { this.on = false; }
   },
-  ready() { if (this.on) try { this.sdk.features.LoadingAPI && this.sdk.features.LoadingAPI.ready(); } catch (e) {} },
+  ready() { if (this.sdk) try { this.sdk.features.LoadingAPI && this.sdk.features.LoadingAPI.ready(); } catch (e) {} },
   // разметка геймплея: платформа должна знать, когда идет игра, а когда меню, пауза или реклама
   play(on) {
-    if (!this.on) return;
+    if (!this.sdk) return;
     try { const g = this.sdk.features.GameplayAPI; if (g) on ? g.start() : g.stop(); } catch (e) {}
   },
   // ролик за дополнительную жизнь: звук глушим на время показа – иначе модерация заворачивает
   rewarded(onReward, onSkip) {
-    if (!this.on || this.adBusy) { onSkip && onSkip(); return; }
+    if (!this.sdk || this.adBusy) { onSkip && onSkip(); return; }
     this.adBusy = true;
     let got = false;
     const back = () => { adPause(false); this.adBusy = false; };
@@ -443,6 +444,7 @@ const YA = {
   // выжившие выше. Расхождение сознательное – в каталоге «100030540» выглядело бы мусором.
   pack: r => Math.max(0, Math.min(99999999, Math.round(r.cash))),
   async submit(rec) {
+    if (!this.sdk) throw new Error('sdk');
     try {
       if (await this.sdk.isAvailableMethod('leaderboards.setScore'))
         await this.sdk.leaderboards.setScore(this.board, this.pack(rec), JSON.stringify({ c: rec.cash, w: rec.won ? 1 : 0, t: rec.time }));
@@ -450,6 +452,7 @@ const YA = {
     return this.fetch();
   },
   async fetch() {
+    if (!this.sdk) throw new Error('sdk');
     const res = await this.sdk.leaderboards.getEntries(this.board, { quantityTop: 10, includeUser: true, quantityAround: 1 });
     const row = e => {
       let d = {}; try { d = JSON.parse(e.extraData || '{}'); } catch (err) {}
@@ -1492,9 +1495,11 @@ function showEnd() {
     (stat.fists ? 'ачивка <b>голыми руками</b> – без единого ствола, +$1 000 000<br>' : '') +
     'касса <b>$' + cash + '</b> · сумок <b>' + stat.bags + '</b><br>' +
     'охрана <b>' + stat.guards + '</b> · полиция <b>' + stat.cops + '</b> · спецназ <b>' + stat.swat + '</b><br>прохожие <b>' + stat.peds + '</b>';
-  const link = document.getElementById('end-link');
-  link.href = CONFIG.presaveUrl;
-  link.textContent = won ? 'Пресейв на BandLink' : 'Пресейв на BandLink – чтобы услышать целиком';
+  const link = document.getElementById('end-link'); // в билде для каталога этих блоков в файле нет
+  if (link) {
+    link.href = CONFIG.presaveUrl;
+    link.textContent = won ? 'Пресейв на BandLink' : 'Пресейв на BandLink – чтобы услышать целиком';
+  }
   document.getElementById('end-cheat').hidden = !cheated;
   lastRec = { name: curName, cash: Math.round(cash), won, time: Math.round(t) };
   renderBoard('board-end', curName);
@@ -1502,9 +1507,12 @@ function showEnd() {
   if (!cheated) Scores.submit(lastRec).then(after); else Scores.fetch(curName).then(after);
   // розыгрыш: форма только при подключенном сервере; заявка уже отправлена – показываем это
   const mailBox = document.getElementById('mailbox');
-  mailBox.hidden = !CONFIG.scoresUrl || cheated;
-  let sent = ''; try { sent = localStorage.getItem(MAIL_KEY) || ''; } catch (e) {}
-  document.getElementById('pmail').value = sent; document.getElementById('mail-note').textContent = sent ? 'заявка принята: ' + sent : '';
+  if (mailBox) {
+    mailBox.hidden = !CONFIG.scoresUrl || cheated;
+    let sent = ''; try { sent = localStorage.getItem(MAIL_KEY) || ''; } catch (e) {}
+    document.getElementById('pmail').value = sent;
+    document.getElementById('mail-note').textContent = sent ? 'заявка принята: ' + sent : '';
+  }
   document.getElementById('hud').hidden = true;
   s.hidden = false;
   document.getElementById('btn-again').focus();
@@ -3834,7 +3842,8 @@ function frame(now) {
 
 document.getElementById('btn-start').addEventListener('click', start);
 document.getElementById('btn-again').addEventListener('click', start);
-document.getElementById('btn-mail').addEventListener('click', async () => {
+const btnMail = document.getElementById('btn-mail'); // в билде для каталога формы розыгрыша нет
+if (btnMail) btnMail.addEventListener('click', async () => {
   const el = document.getElementById('pmail'), note = document.getElementById('mail-note'), email = (el.value || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { note.textContent = 'проверь адрес'; return; }
   note.textContent = 'отправляю…';
