@@ -1508,7 +1508,9 @@ function showEnd() {
   document.getElementById('end-cheat').hidden = !cheated;
   // в каталоге ссылок наружу нельзя, поэтому где искать песню – просто словами
   const track = document.getElementById('end-track');
-  if (track) track.textContent = YA.on ? 'Песня «Альпачино» группы «чартер» – есть в Яндекс Музыке' : '';
+  if (track) track.textContent = !YA.on ? ''
+    : won ? 'Это была песня «Альпачино» группы «чартер» – она есть в Яндекс Музыке'
+    : 'Услышать песню целиком можно двумя способами: дожить до конца или найти «Альпачино» группы «чартер» в Яндекс Музыке';
   lastRec = { name: curName, cash: Math.round(cash), won, time: Math.round(t) };
   renderBoard('board-end', curName);
   const after = list => { renderBoard('board-end', curName, list); renderBoard('board-start', curName, list); };
