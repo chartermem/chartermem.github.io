@@ -242,6 +242,7 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
   <p class="sub" id="end-sub"></p>
   <div class="stats" id="end-stats"></div>
   <div class="hint" id="end-cheat" hidden>рекорд не засчитан: играл с чит-кодом</div>
+  <div class="hint" id="end-track"></div>
   <div class="board" id="board-end"></div>
   <div class="mailbox only-site" id="mailbox" hidden>
     <div class="hint">Сделал пресейв? Оставь его почту – участвуешь в розыгрыше. Почта нужна только для этого.</div>
@@ -1505,6 +1506,9 @@ function showEnd() {
     link.textContent = won ? 'Пресейв на BandLink' : 'Пресейв на BandLink – чтобы услышать целиком';
   }
   document.getElementById('end-cheat').hidden = !cheated;
+  // в каталоге ссылок наружу нельзя, поэтому где искать песню – просто словами
+  const track = document.getElementById('end-track');
+  if (track) track.textContent = YA.on ? 'Песня «Альпачино» группы «чартер» – есть в Яндекс Музыке' : '';
   lastRec = { name: curName, cash: Math.round(cash), won, time: Math.round(t) };
   renderBoard('board-end', curName);
   const after = list => { renderBoard('board-end', curName, list); renderBoard('board-start', curName, list); };
