@@ -218,7 +218,7 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
     <div><i class="ic gun"></i>Заработать и купить ствол</div>
     <div><i class="ic bro"></i>Забрать двоих пацанов</div>
   </div>
-  <input id="pname" class="name" maxlength="14" placeholder="ТВОЕ ИМЯ" autocomplete="off" spellcheck="false">
+  <input id="pname" class="name only-site" maxlength="14" placeholder="ТВОЕ ИМЯ" autocomplete="off" spellcheck="false">
   <button class="btn" id="btn-start">Заряжай рок-н-ролл</button>
   <div class="board" id="board-start"></div>
   <p class="plats-title only-site">Пока не начал – послушай остальное</p>
@@ -411,7 +411,7 @@ const playerId = (() => { try { let id = localStorage.getItem(ID_KEY); if (!id) 
 const ON_YANDEX = !!window.YaGames;
 if (ON_YANDEX) document.documentElement.classList.add('ya');
 const YA = {
-  on: ON_YANDEX, sdk: null, board: 'alpachino', adBusy: false, revived: false,
+  on: ON_YANDEX, sdk: null, board: 'alpachino', name: '', adBusy: false, revived: false,
   async init() {
     if (!ON_YANDEX) return;
     try { this.sdk = await YaGames.init(); } catch (e) { this.on = false; }
@@ -463,6 +463,7 @@ const YA = {
     try {
       const p = await this.sdk.leaderboards.getPlayerEntry(this.board);
       me = row(p);
+      this.name = me.name;   // имя игрока в каталоге – из профиля, им же подсвечиваем его строку
     } catch (e) {}
     return { list, total: (res.leaderboard && res.leaderboard.playerCount) || list.length, me };
   },
@@ -528,15 +529,18 @@ function renderBoard(id, me, list) {
   document.getElementById(id).innerHTML = '<h3>' + title + '</h3>' + html;
 }
 function playerName() {
-  const el = document.getElementById('pname'), n = (el.value || '').trim().slice(0, 14).toUpperCase() || 'АНОНИМ';
+  const el = document.getElementById('pname');
+  if (!el) return YA.name || 'АНОНИМ';   // в каталоге имени не спрашиваем: оно приходит из профиля Яндекса
+  const n = (el.value || '').trim().slice(0, 14).toUpperCase() || 'АНОНИМ';
   try { localStorage.setItem(NAME_KEY, n); } catch (e) {}
   return n;
 }
-try { document.getElementById('pname').value = localStorage.getItem(NAME_KEY) || ''; } catch (e) {}
+try { const pn = document.getElementById('pname'); if (pn) pn.value = localStorage.getItem(NAME_KEY) || ''; } catch (e) {}
 renderBoard('board-start');
 function loadBoard(attempt) {
-  const nm = localStorage.getItem(NAME_KEY) || '';
-  Scores.fetch(nm).then(list => { renderBoard('board-start', nm, list); if (!Scores.online && (CONFIG.scoresUrl || YA.on) && attempt < 2) setTimeout(() => loadBoard(attempt + 1), 4000); });
+  const stored = localStorage.getItem(NAME_KEY) || '';
+  // в каталоге свое имя становится известно только после ответа лидерборда – берем его оттуда
+  Scores.fetch(stored).then(list => { renderBoard('board-start', YA.on ? (YA.name || '') : stored, list); if (!Scores.online && (CONFIG.scoresUrl || YA.on) && attempt < 2) setTimeout(() => loadBoard(attempt + 1), 4000); });
 }
 loadBoard(0);
 let cheatBuf = '';       // набор чит-кода с клавиатуры
