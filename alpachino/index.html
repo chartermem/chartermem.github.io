@@ -4,6 +4,47 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Альпачино</title>
+<meta name="theme-color" content="#0E0E12">
+<!-- Заглушка счетчика целей: в сборке для каталога блок с Метрикой вырезан,
+     а вызовы goal() в коде остаются. Без заглушки они падали бы с ошибкой. -->
+<script>window.goal=function(){};</script>
+<!-- only-site -->
+<!-- Карточка ссылки, иконки сайта и счетчик. В каталоге Яндекс Игр внешние адреса
+     запрещены, поэтому build_yandex.py вырезает все между метками only-site. -->
+<!-- Перевод с http на https делает сам Object Storage: как только к бакету привязан
+     сертификат, он отвечает 301. Своего скрипта для этого не нужно. -->
+<meta name="description" content="Игра на одну песню: ограбь банк за три минуты – ровно столько длится «Альпачино» группы «чартер». Музыка играет, пока ты жив.">
+<link rel="canonical" href="https://alpachino-game.ru/">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="чартер">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="Альпачино – игра на одну песню">
+<meta property="og:description" content="Ограбь банк за три минуты – ровно столько длится песня. Музыка играет, пока ты жив.">
+<meta property="og:url" content="https://alpachino-game.ru/">
+<meta property="og:image" content="https://alpachino-game.ru/og-1200x630.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Пиксельный город сверху и надпись «Альпачино»">
+<meta name="twitter:card" content="summary_large_image">
+<script>
+/* Яндекс.Метрика. Номер счетчика вписывается в METRIKA; пока строка пустая,
+   ничего не грузится – страница работает и локально, и без интернета. */
+(function () {
+  var METRIKA = '113961359';
+  if (!METRIKA) return;
+  (function (m, e, t, r, i, k, a) {
+    m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments) };
+    m[i].l = 1 * new Date();
+    k = e.createElement(t); a = e.getElementsByTagName(t)[0];
+    k.async = 1; k.src = r; a.parentNode.insertBefore(k, a);
+  })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+  ym(METRIKA, 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true });
+  window.goal = function (name, params) { try { ym(METRIKA, 'reachGoal', name, params); } catch (e) {} };
+})();
+</script>
+<!-- /only-site -->
 <style>
 /* Press Start 2P (SIL Open Font License) вшит в файл: Google Fonts – внешний ресурс,
    в каталоге Яндекс Игр он запрещен, да и в России грузится через раз. */
@@ -30,6 +71,7 @@ canvas.aim{cursor:none}
 .px{display:inline-block;width:16px;height:16px;image-rendering:pixelated;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 2px 0 #000)}
 .px.star{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath fill='%23F2B01E' d='M4 0h1v3h4v1h-1v1h-1v1h1v3h-1v-1h-1v-1h-1v-1h-1v1h-1v1h-1v1h-1v-3h1v-1h-1v-1h-1v-1h4z'/%3E%3C/svg%3E")}
 .px.star.off{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath fill='%233A3A44' d='M4 0h1v3h4v1h-1v1h-1v1h1v3h-1v-1h-1v-1h-1v-1h-1v1h-1v1h-1v1h-1v-3h1v-1h-1v-1h-1v-1h4z'/%3E%3C/svg%3E")}
+.px.inline{width:1em;height:1em;vertical-align:-.14em;margin:0 .05em} /* звезда внутри строки титра: по кеглю текста */
 .px.heart{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 8' shape-rendering='crispEdges'%3E%3Cpath fill='%23C8102E' d='M1 0h2v1h1v1h1v-1h1v-1h2v1h1v3h-1v1h-1v1h-1v1h-1v1h-1v-1h-1v-1h-1v-1h-1v-1h-1v-3h1z'/%3E%3Cpath fill='%23FF6A7A' d='M1 1h1v1h-1z'/%3E%3C/svg%3E")}
 .ic{display:inline-block;width:14px;height:14px;image-rendering:pixelated;background-size:contain;background-repeat:no-repeat;background-position:center;vertical-align:middle;filter:drop-shadow(0 2px 0 #000)}
 .ic.w-pistol,.ic.w-shotgun,.ic.w-rifle{width:22px;height:12px;margin-right:6px}
@@ -125,14 +167,18 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
 .name{font-family:var(--hud);font-size:12px;padding:12px 14px;background:#1A1A22;color:var(--ink);border:2px solid var(--gold-deep);text-align:center;text-transform:uppercase;width:min(260px,80vw);outline:none;letter-spacing:.06em}
 .name:focus{border-color:var(--gold)}
 .name::placeholder{color:var(--muted)}
-.board{flex-shrink:0;font-family:var(--hud);font-size:9px;line-height:2;color:var(--ink-dim);width:min(360px,88vw);font-variant-numeric:tabular-nums;
+/* flex-shrink:0 обязателен: у блока со своей прокруткой минимальный размер считается
+   нулевым, и на тесном экране таблица схлопывалась – не было видно ни строки */
+.board{font-family:var(--hud);font-size:9px;line-height:2;color:var(--ink-dim);width:min(360px,88vw);font-variant-numeric:tabular-nums;flex-shrink:0;
   max-height:min(30vh,300px);overflow-y:auto;overscroll-behavior:contain;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--gold-deep) transparent}
 .board h3{position:sticky;top:0;background:var(--ground);padding:2px 0}
 .touch .screen{gap:12px;padding:20px 16px}
 .touch .sub{font-size:9px;line-height:1.75}
 .touch .tasklist{gap:5px}
 .touch .stats{font-size:10px;line-height:1.9}
-.touch .board{max-height:24vh}
+/* на телефоне таблица короче (пять строк) и без своей прокрутки: прокрутка внутри
+   прокрутки пальцем не ловится, лист крутим целиком */
+.touch .board{max-height:none;overflow:visible;padding-right:0}
 .touch .mailbox{gap:5px}
 .touch .mailbox .hint{line-height:1.6}
 .board h3{font-size:9px;color:var(--gold);letter-spacing:.14em;margin:0 0 4px;font-weight:400;text-transform:uppercase}
@@ -150,6 +196,9 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
 .mailrow{display:flex;gap:8px;align-items:stretch;width:100%}
 .name.mail{flex:1;width:auto;min-width:0;text-transform:none;font-size:10px}
 .btn.small{font-size:9px;padding:10px 12px;box-shadow:0 4px 0 var(--gold-deep)}
+.mailform{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%}
+/* пресейв – ссылка, но выглядит как кнопка: мелкой строчкой ее не замечали */
+.btn.presave{display:block;width:100%;text-decoration:none;text-align:center}
 #mail-note{color:var(--gold)}
 .keys{display:flex;gap:22px;justify-content:center;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
 .keys>div{display:flex;flex-direction:column;align-items:center;gap:8px}
@@ -164,7 +213,8 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
 .pad.fire::after{content:'огонь';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--hud);font-size:7px;color:var(--ink)}
 .stats{font-family:var(--hud);font-size:11px;line-height:2.1;color:var(--ink-dim);font-variant-numeric:tabular-nums}
 .stats b{color:var(--gold);font-weight:400}
-.note{position:fixed;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;font-size:7px;line-height:1.8;color:var(--muted)}
+/* итог одной строкой: сумма крупно, остальное на финальном экране не нужно */
+.stats .cash{display:block;font-size:26px;line-height:1.3;color:var(--gold)}
 #btn-act{position:fixed;right:18px;bottom:calc(22px + env(safe-area-inset-bottom));width:64px;height:64px;border-radius:50%;border:2px solid rgba(243,234,215,.5);background:rgba(14,14,18,.6);color:var(--gold);font-family:var(--hud);font-size:9px;line-height:1.3;letter-spacing:.04em;text-transform:uppercase;touch-action:none;padding:0}
 #btn-act:active{background:rgba(242,176,30,.35)}
 #btn-act.fire{border-color:var(--blood);color:var(--ink);background:rgba(200,16,46,.35);width:74px;height:74px}
@@ -228,7 +278,6 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
   <div class="plats only-site" id="plats-start"></div>
   <div class="hint" id="hint-sound">M – звук вкл / выкл</div>
   <div class="hint" id="hint"></div>
-  <div class="note" id="note"></div>
 </div>
 
 <div id="screen-ad" class="screen" hidden>
@@ -248,13 +297,11 @@ h1{font-family:var(--poster);font-weight:400;font-size:clamp(20px,6vmin,36px);li
   <div class="hint" id="end-cheat" hidden>рекорд не засчитан: играл с чит-кодом</div>
   <div class="hint" id="end-track"></div>
   <div class="board" id="board-end"></div>
-  <div class="mailbox only-site" id="mailbox" hidden>
-    <div class="hint">Сделал пресейв? Оставь его почту – участвуешь в розыгрыше. Почта нужна только для этого.</div>
-    <div class="mailrow"><input id="pmail" class="name mail" type="email" maxlength="80" placeholder="ПОЧТА ПРЕСЕЙВА" autocomplete="email"><button class="btn small" id="btn-mail">Участвую</button></div>
-    <div class="hint" id="mail-note"></div>
+  <div class="mailbox only-site" id="mailbox">
+    <a class="btn presave" id="end-link" href="https://band.link/alpach" target="_blank" rel="noopener">Слушать «Альпачино»</a>
+    <div class="hint"><a href="/rules.html" target="_blank" rel="noopener">Условия розыгрыша</a></div>
   </div>
   <button class="btn" id="btn-again">Еще раз</button>
-  <a class="link only-site" id="end-link" href="#" target="_blank" rel="noopener"></a>
   <p class="plats-title only-site">Остальные песни чартера</p>
   <div class="plats only-site" id="plats-end"></div>
 </div>
@@ -400,9 +447,12 @@ const FIRE_K = TOUCH ? 1.6 : 1;   // на телефоне враги стрел
 let GOD = qs.has('god'); // бессмертие: ?god для отладки или чит HESOYAM в игре
 const DEBUG = qs.has('god'); // только отладка: опоздания прощаются, склейка переносит домой; чит-код этого не дает
 let cheated = false, curName = 'АНОНИМ', lastRec = null; // чит-код или отладочные параметры – рекорд не засчитывается
-const MAIL_KEY = 'alp-mail';
+// Цифра в конце ключа – номер чистки. Таблицу перед розыгрышем обнулили (31.10.2026),
+// и вместе с серверной надо сбросить копию в браузере игрока: иначе он открывает игру
+// и видит свои старые рекорды, пока не ответит сервер. Чистим таблицу снова – меняем цифру.
+const MAIL_KEY = 'alp-mail2';
 // таблица рекордов: пока в браузере игрока (localStorage); один игрок – одна строка, лучшая
-const SCORES_KEY = 'alp-scores', NAME_KEY = 'alp-name';
+const SCORES_KEY = 'alp-scores2', NAME_KEY = 'alp-name';
 // Scores: общая таблица на сервере (Apps Script + Google-таблица), если задан CONFIG.scoresUrl; иначе или без связи – localStorage
 const ID_KEY = 'alp-id';
 const playerId = (() => { try { let id = localStorage.getItem(ID_KEY); if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem(ID_KEY, id); } return id; } catch (e) { return ''; } })();
@@ -523,13 +573,14 @@ const Scores = {
 };
 const esc = str => String(str).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // топ-10, а если своя строка ниже – многоточие и она с местом; в заголовке – сколько всего игроков
+const TOP_ROWS = TOUCH ? 5 : 10; // на телефоне экран короткий: пятерки хватает, своя строка все равно прилипнет снизу
 function renderBoard(id, me, list) {
-  list = (list || Scores.load()).slice(0, 10);
+  list = (list || Scores.load()).slice(0, TOP_ROWS);
   const total = Math.max(Scores.total, list.length);
-  const title = (CONFIG.scoresUrl && !Scores.online ? (Scores.tried ? 'рекорды · нет связи, только этот браузер' : 'рекорды · загружаю…') : 'рекорды') + (total > 10 ? ' · игроков: ' + total : '');
+  const title = (CONFIG.scoresUrl && !Scores.online ? (Scores.tried ? 'рекорды · нет связи, только этот браузер' : 'рекорды · загружаю…') : 'рекорды') + (total > TOP_ROWS ? ' · игроков: ' + total : '');
   const row = (r, n) => '<div class="row' + (r.name === me ? ' me' : '') + '"><span>' + n + '. ' + esc(r.name) + '</span><span>' + (r.won ? 'дожил' : fmt(r.time)) + '</span><span>$' + r.cash + '</span></div>';
   let html = list.length ? list.map((r, i) => row(r, i + 1)).join('') : '<div>пока никого – будь первым</div>';
-  if (me && Scores.me && Scores.me.name === me && Scores.me.rank > 10) html += '<div class="mine"><div class="dots">···</div>' + row(Scores.me, Scores.me.rank) + '</div>'; // своя строка прилипает к низу таблицы – крутить до нее не надо
+  if (me && Scores.me && Scores.me.name === me && Scores.me.rank > TOP_ROWS) html +='<div class="mine"><div class="dots">···</div>' + row(Scores.me, Scores.me.rank) + '</div>'; // своя строка прилипает к низу таблицы – крутить до нее не надо
   document.getElementById(id).innerHTML = '<h3>' + title + '</h3>' + html;
 }
 function playerName() {
@@ -834,7 +885,9 @@ function makeCar(x, y, angle, kind, type) {
   const tp = CAR_TYPES[type];
   const c = { x, y, angle, speed: 0, kind, type, r: tp.r, len: tp.len, wid: tp.wid, hp: 100 * CAR_HP_K, maxHp: 100 * CAR_HP_K, dead: false,
     maxSpeed: tp.maxSpeed, acc: tp.acc, brake: 380, turn: tp.turn, drag: 0.55, color: '#F2B01E', braking: false, stuck: 0, reverseT: 0 };
-  if (kind === 'cop') { c.color = '#E9E9F0'; c.hp = 60; c.maxSpeed = 200; c.acc = 230; c.turn = 3.2; }
+  // прочность патруля ниже обычной – но и максимум у него свой, иначе целая машина
+  // считается полуразбитой и дымит из-под капота прямо с выезда
+  if (kind === 'cop') { c.color = '#E9E9F0'; c.hp = c.maxHp = 60; c.maxSpeed = 200; c.acc = 230; c.turn = 3.2; }
   if (kind === 'civ') { c.color = pick(CIV_COLORS); }
   return c;
 }
@@ -1125,17 +1178,11 @@ const stars = () => Math.min(5, Math.max(starsAuto, starsCrime));
 const audio = new Audio();
 audio.preload = 'auto';
 let audioReady = false, audioPlaying = false;
-audio.addEventListener('loadedmetadata', () => { if (isFinite(audio.duration) && audio.duration > 10 && !qs.get('d')) CONFIG.duration = audio.duration; audioReady = true; updateNote(); });
-audio.addEventListener('error', () => { audioReady = false; updateNote(); });
+audio.addEventListener('loadedmetadata', () => { if (isFinite(audio.duration) && audio.duration > 10 && !qs.get('d')) CONFIG.duration = audio.duration; audioReady = true; });
+audio.addEventListener('error', () => { audioReady = false; });
 audio.addEventListener('ended', () => { if (state === 'play') finale(); });
 audio.src = CONFIG.audioSrc; audio.volume = 0.8;
 
-function updateNote() {
-  document.getElementById('note').textContent = audioReady
-    ? 'Прототип. Трек: ' + fmt(CONFIG.duration)
-    : 'Прототип. Трек не подключен – игра идет по таймеру ' + fmt(CONFIG.duration);
-}
-updateNote();
 // схема управления на стартовом экране: клавиши для ПК, джойстик и кнопка для телефона
 document.getElementById('hint-sound').hidden = TOUCH; // на телефоне клавиши M нет – звук регулируется кнопкой громкости
 document.getElementById('hint').innerHTML = TOUCH
@@ -1212,6 +1259,7 @@ function start() {
   }
   enterScene(0, true);
   YA.play(true);
+  goal('START');
 }
 
 // ---------- сцены ----------
@@ -1489,6 +1537,8 @@ function revive() {
 
 function showEnd() {
   const won = state === 'finale';
+  // секунда обрыва показывает, где именно люди отваливаются: двор, банк или погоня
+  goal(won ? 'WIN' : 'DEATH', { sec: Math.round(t) });
   const s = document.getElementById('screen-end');
   s.className = 'screen ' + (won ? 'won' : 'dead');
   document.getElementById('end-kicker').textContent = won ? 'ты дослушал до конца' : 'песня оборвалась на ' + fmt(t);
@@ -1498,16 +1548,12 @@ function showEnd() {
     : lateFail ? 'Не добрался к сроку. Семь отмерь, один отрежь – песня никого не ждет.'
     : lostCar ? (noCar ? 'Пришел к банку пешком. После ограбления от погони не уйти – это просто бизнес, boy.' : crewLost ? 'Пацанов положили у банка, тачку завести некому. Исторически дело мужчин.' : abandoned ? 'Пришел домой пешком, а тачка с кассой осталась в городе. Где теперь моя Омерта?' : 'Полиция расстреляла тачку с деньгами, пока пацаны ее толкали. В воздухе кружится cash.')
     : 'Вот и все, на грани смерти, в воздухе кружится cash. Дальше песню слышат только выжившие.';
-  document.getElementById('end-stats').innerHTML =
-    (won ? 'дожил всю песню – и оказался над пропастью во ржи<br>' : 'дожил <b>' + fmt(t) + '</b> из <b>' + fmt(CONFIG.duration) + '</b><br>') +
-    (stat.fists ? 'ачивка <b>голыми руками</b> – без единого ствола, +$1 000 000<br>' : '') +
-    'касса <b>$' + cash + '</b> · сумок <b>' + stat.bags + '</b><br>' +
-    'охрана <b>' + stat.guards + '</b> · полиция <b>' + stat.cops + '</b> · спецназ <b>' + stat.swat + '</b><br>прохожие <b>' + stat.peds + '</b>';
+  // на финальном экране оставляем только кассу: по ней считается место в таблице,
+  // а подробная статистика забивала экран и тонула в нем сама
+  document.getElementById('end-stats').innerHTML = '<span class="cash">$' + cash + '</span>'
+    + (stat.fists ? 'голыми руками, без единого ствола – плюс $1 000 000' : '');
   const link = document.getElementById('end-link'); // в билде для каталога этих блоков в файле нет
-  if (link) {
-    link.href = CONFIG.listenUrl;
-    link.textContent = 'Слушать «Альпачино»';
-  }
+  if (link) link.href = CONFIG.listenUrl; // подпись на кнопке постоянная, она в разметке
   document.getElementById('end-cheat').hidden = !cheated;
   // в каталоге ссылок наружу нельзя, поэтому где искать песню – просто словами
   const track = document.getElementById('end-track');
@@ -1518,9 +1564,9 @@ function showEnd() {
   renderBoard('board-end', curName);
   const after = list => { renderBoard('board-end', curName, list); renderBoard('board-start', curName, list); };
   if (!cheated) Scores.submit(lastRec).then(after); else Scores.fetch(curName).then(after);
-  // Розыгрыш завершен: новые почты больше не собираем.
+  // Розыгрыш завершен: новые почты не собираем, кнопку прослушивания показываем всегда.
   const mailBox = document.getElementById('mailbox');
-  if (mailBox) mailBox.hidden = true;
+  if (mailBox) mailBox.hidden = false;
   document.getElementById('hud').hidden = true;
   s.hidden = false;
   document.getElementById('btn-again').focus();
@@ -1815,11 +1861,13 @@ function carHitsPerson(car, person, k) {
   if (d >= car.r + person.r) return 0;
   const nx = (person.x - car.x) / (d || 1), ny = (person.y - car.y) / (d || 1);
   person.x = car.x + nx * (car.r + person.r); person.y = car.y + ny * (car.r + person.r);
-  const f = Math.abs(car.speed) / 270;
-  // на скорости давит насмерть; медленный толчок только сбивает с ног. В машине жизни не трогаются вообще – только прочность
-  if (f > 0.3) { person.hp = 0; car.speed *= 0.7; blood(person.x, person.y, 14); sfx.thud(1); }
-  else if (f > 0.12) { person.stun = 0.45; car.speed *= 0.8; particles.push({ x: person.x, y: person.y, vx: 0, vy: -20, life: 0.3, size: 5, color: '#F3EAD7' }); }
-  return f;
+  // k – скорость, выше которой давит насмерть; ниже сороковой доли от нее только сбивает
+  // с ног. Раньше порог был общий (81) и городской трафик, который едет 35–60, человека
+  // не давил вообще: по улице можно было ходить сквозь поток. В машине жизни не трогаются.
+  const sp = Math.abs(car.speed), kill = k || 80;
+  if (sp > kill) { person.hp = 0; car.speed *= 0.7; blood(person.x, person.y, 14); sfx.thud(1); }
+  else if (sp > kill * 0.4) { person.stun = 0.45; car.speed *= 0.8; particles.push({ x: person.x, y: person.y, vx: 0, vy: -20, life: 0.3, size: 5, color: '#F3EAD7' }); }
+  return sp / 270;
 }
 // выстрел из купленного ствола – в городе или в помещении
 function fireWeapon(aim) {
@@ -1833,30 +1881,38 @@ function fireWeapon(aim) {
   }
   flashes.push({ x: hero.x + Math.cos(aim) * 14, y: hero.y + Math.sin(aim) * 14, life: 0.06 });
 }
-// удар кулаком: вырубает прохожего на несколько секунд, не убивает
+// удар кулаком: вырубает прохожего на несколько секунд, не убивает.
+// Бьем ближайшего, а не первого попавшегося в списке, и вплотную – в любую сторону:
+// удар в спину стоящему рядом копу не засчитывался, потому что сектор считался от взгляда.
 function punch(aim) {
   if (hero.cd > 0) return;
   hero.cd = 0.45; hero.punchT = 0.15; sfx.punch();
+  let best = null, bd = 34;
   for (const p of peds) {
     if (p.dead || p.ko > 0) continue;
     const d = Math.hypot(p.x - hero.x, p.y - hero.y);
-    if (d > 30 || Math.abs(wrap(Math.atan2(p.y - hero.y, p.x - hero.x) - aim)) > 0.9) continue;
-    p.ko = 9; p.ax = aim; particles.push({ x: p.x, y: p.y, vx: 0, vy: -20, life: 0.4, size: 5, color: '#F3EAD7' });
-    if (p.cop) addCrimeStar('Ударил копа! Розыск ★');
-    break;
+    if (d > bd) continue;
+    if (d > 20 && Math.abs(wrap(Math.atan2(p.y - hero.y, p.x - hero.x) - aim)) > 1.2) continue;
+    bd = d; best = p;
   }
+  if (!best) return;
+  best.ko = 9; best.ax = aim; particles.push({ x: best.x, y: best.y, vx: 0, vy: -20, life: 0.4, size: 5, color: '#F3EAD7' });
+  if (best.cop) addCrimeStar('Ударил копа! Розыск ★');
 }
 // то же в помещении: охрана, полиция и спецназ лежат 9 секунд
 function punchRoom(aim) {
   if (hero.cd > 0) return;
   hero.cd = 0.45; hero.punchT = 0.15; sfx.punch();
+  let best = null, bd = 34;
   for (const e of room.enemies) {
     if (e.dead || e.ko > 0) continue;
     const d = Math.hypot(e.x - hero.x, e.y - hero.y);
-    if (d > 30 || Math.abs(wrap(Math.atan2(e.y - hero.y, e.x - hero.x) - aim)) > 0.9) continue;
-    e.ko = 9; e.angle = aim; e.idle = false; particles.push({ x: e.x, y: e.y, vx: 0, vy: -20, life: 0.4, size: 5, color: '#F3EAD7' });
-    break;
+    if (d > bd) continue;
+    if (d > 20 && Math.abs(wrap(Math.atan2(e.y - hero.y, e.x - hero.x) - aim)) > 1.2) continue;
+    bd = d; best = e;
   }
+  if (!best) return;
+  best.ko = 9; best.angle = aim; best.idle = false; particles.push({ x: best.x, y: best.y, vx: 0, vy: -20, life: 0.4, size: 5, color: '#F3EAD7' });
 }
 // финал: за каждую волну подъезжает по машине на троих; с четвертой волны – фургоны спецназа
 function arriveCityCars(n, waveNo) {
@@ -1867,7 +1923,7 @@ function arriveCityCars(n, waveNo) {
     const swat = (waveNo === 0 && n === 0) || Math.random() < 0.5; // спецназ едет с самого начала, в первой волне – точно
     const c = makeCar(cell.x, cell.y, 0, 'cop', swat ? 'van' : 'sedan');
     if (swat) { c.color = '#1C2230'; c.swat = true; c.maxSpeed = 250; } else c.maxSpeed = 290;
-    c.hp = 80; c.count = cnt; c.lane = false; c.chasing = true;
+    c.hp = c.maxHp = 80; c.count = cnt; c.lane = false; c.chasing = true;
     standCars.push(c);
   }
 }
@@ -1889,6 +1945,45 @@ function unloadCar(c) {
       dead: false, cop: true, hostile: true, swat: !!c.swat, hp: 1, cd: rand(0.4, 1.2), r: 7, speed: 0, aim: 0, stop: 0 });
   }
   c.unloaded = true; c.parked = true; c.speed = 0; parked.push(c);
+}
+// Патруль прижал игрока и встал – экипаж выходит и стреляет. Раньше машина просто
+// стояла рядом с копами внутри, и это выглядело глупо.
+function copBail(c) {
+  c.crew = [];
+  for (let i = 0; i < 2; i++) {
+    const side = i ? 1 : -1;
+    const x = c.x + Math.cos(c.angle + Math.PI / 2 * side) * 22, y = c.y + Math.sin(c.angle + Math.PI / 2 * side) * 22;
+    const p = { x, y, li: 0, lj: 0, dir: 0, vel: 0, tx: x, ty: y, skin: '#D9B48F', cloth: '#1F3A93',
+      dead: false, cop: true, post: true, bail: true, hp: 1, cd: rand(0.3, 0.9), r: 7, speed: 0, aim: c.angle, stop: 0 };
+    peds.push(p); c.crew.push(p);
+  }
+  c.out = true; c.speed = 0; c.braking = false; c.haltT = 0;
+}
+// Экипаж снаружи. Игрок уехал – бегут обратно и садятся, всех положили – машина брошена.
+// Возвращает 'out' (стоят и стреляют), 'back' (сели, можно ехать) или 'lost' (экипажа нет).
+function copBoard(c, dt, T, away) {
+  // вырубленный экипаж за руль не вернется – машина для нас потеряна, ее можно угнать
+  c.crew = c.crew.filter(p => !p.dead && !(p.ko > 0) && peds.indexOf(p) >= 0);
+  if (!c.crew.length) return 'lost';
+  let inside = 0;
+  for (const p of c.crew) {
+    p.ret = away;
+    if (!away) continue;
+    const dx = c.x - p.x, dy = c.y - p.y, d = Math.hypot(dx, dy) || 1;
+    if (d < 16) { inside++; continue; }
+    p.aim = Math.atan2(dy, dx);
+    p.x += dx / d * 130 * dt; p.y += dy / d * 130 * dt;
+  }
+  if (away && inside === c.crew.length) {
+    dropCrew(c); c.out = false; c.haltT = 0; c.bailCd = 3; // пауза, чтобы не выскакивать снова на первом же светофоре
+    return 'back';
+  }
+  return 'out';
+}
+// убрать экипаж с улицы: сели в машину или уехали вместе с ней за кадр
+function dropCrew(c) {
+  for (const p of c.crew || []) { const k = peds.indexOf(p); if (k >= 0) peds.splice(k, 1); }
+  c.crew = [];
 }
 function cityLos(ax, ay, bx, by) {
   const d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / 20);
@@ -1930,9 +2025,14 @@ function updateCity(dt) {
     actQueued = false;
     if (walking && !hero.dead) {
       let best = null, bd = 48;
-      const cand = [player, ...parked, ...civs];
+      // патруль, из которого вышел экипаж, тоже можно угнать – прямо у них из-под носа
+      const cand = [player, ...parked, ...civs, ...cops.filter(c => c.out)];
       for (const c of cand) { const d = Math.hypot(c.x - hero.x, c.y - hero.y); if (d < bd) { bd = d; best = c; } }
-      if (best) { jackCar(best); sfx.rev(); }
+      if (best) {
+        const k = cops.indexOf(best);
+        if (k >= 0) { best.out = false; best.crew = []; cops.splice(k, 1); }
+        jackCar(best); sfx.rev();
+      }
     } else if (!walking) {
       // выходим: герой появляется слева от машины
       player.speed *= 0.3;
@@ -2058,17 +2158,33 @@ function updateCity(dt) {
   }
   for (let i = cops.length - 1; i >= 0; i--) {
     const c = cops[i];
+    const dP = Math.hypot(c.x - P.x, c.y - P.y);
     if (!playing) moveCar(c, dt, 0, 0, false);
+    else if (c.out) {
+      // экипаж снаружи. Игрок отъехал или рванул с места – садятся обратно
+      const fleeing = !walking && Math.abs(player.speed) > 150 && dP > 200;
+      const r = copBoard(c, dt, P, dP > 380 || fleeing);
+      if (r === 'lost') { c.unloaded = true; c.parked = true; c.out = false; parked.push(c); cops.splice(i, 1); continue; }
+    }
     else if (!c.chasing) { if (c.lane || initLane(c)) laneMove(c, dt); else moveCar(c, dt, 0.4, 0, false); } // патруль
-    else { c.lane = false; copAI(c, dt, P); }
-    if (Math.hypot(c.x - P.x, c.y - P.y) > 24 * CELL) { cops.splice(i, 1); continue; }
+    else {
+      c.lane = false;
+      if (c.bailCd > 0) c.bailCd -= dt;
+      // подъехал вплотную к стоящему игроку – тормозит и высаживает экипаж
+      const slow = walking || Math.abs(player.speed) < 45;
+      if (stars() > 0 && dP < 150 && slow) { moveCar(c, dt, Math.abs(c.speed) > 25 ? -1 : 0, 0, false); c.haltT = (c.haltT || 0) + dt; }
+      else { copAI(c, dt, P); c.haltT = (Math.abs(c.speed) < 30 && dP < 320) ? (c.haltT || 0) + dt : 0; }
+      if (stars() > 0 && c.haltT > 0.45 && Math.abs(c.speed) < 40 && !(c.bailCd > 0)) copBail(c);
+    }
+    if (dP > 24 * CELL) { dropCrew(c); cops.splice(i, 1); continue; }
     if (playing) {
       if (walking) carHitsPerson(c, hero, 45);
       else { const f = collideCars(player, c, 30, 35); if (f > 0.15) { explode((player.x + c.x) / 2, (player.y + c.y) / 2, 5, '#CCC'); sfx.thud(Math.min(1, f)); } ramCd -= dt; if (f > 0.25 && ramCd <= 0) { ramCd = 3; addCrimeStar('Таран полиции! Розыск ★', 1, true); } }
     }
     for (let j = i + 1; j < cops.length; j++) collideCars(c, cops[j], 0, 0);
     for (const pc of parked) collideCars(c, pc, 0, 0);
-    if (c.hp <= 0) { explode(c.x, c.y, 40, '#E9E9F0'); cops.splice(i, 1); stat.cops++; payout(c.x, c.y, 200); addCrimeStar('Разбил патруль! Розыск ★', 1, true); }
+    // пустую машину (экипаж уже снаружи) в счет убитых копов не пишем – там некого убивать
+    if (c.hp <= 0) { explode(c.x, c.y, 40, '#E9E9F0'); cops.splice(i, 1); if (!c.out) { stat.cops++; payout(c.x, c.y, 200); } addCrimeStar('Разбил патруль! Розыск ★', 1, true); }
   }
 
   // трафик
@@ -2136,7 +2252,7 @@ function updateCity(dt) {
       if (dd < 280 * FIRE_R && !hero.dead && !cutscene && canFire(p.x, p.y) && cityLos(p.x, p.y, hero.x, hero.y)) { p.cd -= dt; if (p.cd <= 0) { copShoot(p, hero, p.swat); p.cd = (p.swat ? rand(0.25, 0.4) : rand(0.6, 0.95)) * FIRE_K; } }
     }
     // пеший коп: при розыске встает и стреляет по игроку
-    else if (!busy && p.cop && playing && stars() > 0) {
+    else if (!busy && p.cop && playing && stars() > 0 && !p.ret) {
       const dd = Math.hypot(P.x - p.x, P.y - p.y);
       if (dd < 270 * FIRE_R) { busy = true; p.aim = Math.atan2(P.y - p.y, P.x - p.x); if (canFire(p.x, p.y)) p.cd -= dt; if (p.cd <= 0) { copShoot(p, P); p.cd = rand(0.7, 1.1) * FIRE_K; } }
     }
@@ -2151,7 +2267,9 @@ function updateCity(dt) {
         if (p.cop) { if (p.swat) stat.swat++; else stat.cops++; addCrimeStar('Сбил копа! Розыск ★★', 2, true); } else { stat.peds++; pedHits++; if (pedHits >= 2) addCrimeStar('Сбил еще одного! Розыск ★'); }
       }
     }
-    if (!p.hostile && !p.post && Math.hypot(p.x - P.x, p.y - P.y) > 1300) { peds.splice(i, 1); spawnPed(false); }
+    const farOff = Math.hypot(p.x - P.x, p.y - P.y) > 1300;
+    if (farOff && p.bail) peds.splice(i, 1);  // экипаж патруля: машину уже убрали, убираем и его
+    else if (farOff && !p.hostile && !p.post) { peds.splice(i, 1); spawnPed(false); }
   }
 
   // пули на улице
@@ -2301,6 +2419,11 @@ function jackCar(c) {
   if (scene && (scene.id === 'stand' || (scene.id === 'tohide' && arrived))) { toast('Тачку с кассой не бросим'); return; }
   if (c.broken) { toast('Не заведется'); return; }
   if (c !== player) {
+    // Ниже kind становится 'player', и по нему уже не узнать, что это был патруль. Метку
+    // ставим ровно здесь, в момент угона: раскраска остается, а мигалка гаснет – за рулем
+    // мы. Раньше ее ставила высадка экипажа, и мигалка выключалась у чужой машины, стоило
+    // полиции выйти, – больше не включалась уже никогда.
+    if (c.kind === 'cop') c.wasCop = true;
     const idx = civs.indexOf(c); if (idx >= 0) { civs.splice(idx, 1); dropPed(c.x + Math.cos(c.angle + Math.PI / 2) * 22, c.y + Math.sin(c.angle + Math.PI / 2) * 22); }
     const pi = parked.indexOf(c); if (pi >= 0) parked.splice(pi, 1);
     player.kind = 'civ'; player.parked = true; player.speed = 0; parked.push(player);
@@ -2679,7 +2802,11 @@ function showLyric(text, big) {
 function toast(text) {
   const el = document.getElementById('toast');
   el.classList.remove('show'); void el.offsetWidth; // перезапуск анимации, если титры идут подряд
-  el.textContent = text; el.classList.toggle('star', text.indexOf('★') >= 0 || /розыск/i.test(text)); el.classList.add('show');
+  // Символа ★ нет ни в пиксельном шрифте титра, ни в шрифте HUD: браузер подставлял его
+  // из шрифта системы, и звезда получалась гладкой рядом с пиксельными буквами. Ставим ту
+  // же картинку, что и в HUD, – она масштабируется по кеглю строки.
+  el.innerHTML = esc(text).replace(/★/g, '<i class="px star inline"></i>');
+  el.classList.toggle('star', text.indexOf('★') >= 0 || /розыск/i.test(text)); el.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
 }
 
@@ -2985,7 +3112,8 @@ function drawCar(c, time) {
   }
   if (c.type === 'sport') { ctx.fillStyle = '#14141A'; ctx.fillRect(-L / 2, -2, L, 4); ctx.fillRect(-L / 2 - 2, -Wd / 2, 3, Wd); } // спорткар: полоса и спойлер
   if (c.junk && !c.wreck) { ctx.fillStyle = '#7A4A2A'; ctx.fillRect(-L / 2 + 3, -Wd / 2, 6, 5); ctx.fillRect(L / 2 - 9, Wd / 2 - 6, 7, 6); ctx.fillRect(-2, -Wd / 2 + 1, 4, 3); ctx.fillStyle = '#3A3A3A'; ctx.fillRect(-L / 2, Wd / 2 - 4, 5, 4); } // развалюха: ржавчина, вмятина
-  if (c.kind === 'cop') { ctx.fillStyle = '#14141A'; ctx.fillRect(-L / 2 + 4, -Wd / 2, 8, Wd); ctx.fillRect(L / 2 - 12, -Wd / 2, 8, Wd); }
+  // wasCop – угнанный патруль: за рулем уже мы, но раскраска и мигалка никуда не делись
+  if (c.kind === 'cop' || c.wasCop) { ctx.fillStyle = '#14141A'; ctx.fillRect(-L / 2 + 4, -Wd / 2, 8, Wd); ctx.fillRect(L / 2 - 12, -Wd / 2, 8, Wd); }
   if (c.type === 'van') {          // фургон: длинная крыша, стекло у самого носа, багажник на крыше
     ctx.fillStyle = 'rgba(18,18,26,.8)'; ctx.fillRect(-L * 0.42, -Wd / 2 + 3, L * 0.62, Wd - 6);
     ctx.fillStyle = 'rgba(255,255,255,.14)'; for (let i = 0; i < 3; i++) ctx.fillRect(-L * 0.36 + i * L * 0.16, -Wd / 2 + 4, 2, Wd - 8);
@@ -3002,8 +3130,8 @@ function drawCar(c, time) {
   }
   ctx.fillStyle = lightsOn ? '#FFF1B0' : '#B8B090'; ctx.fillRect(L / 2 - 3, -Wd / 2 + 1, 3, 3); ctx.fillRect(L / 2 - 3, Wd / 2 - 4, 3, 3);
   ctx.fillStyle = c.braking ? '#FF3B3B' : '#7A1414'; ctx.fillRect(-L / 2, -Wd / 2 + 1, 3, 3); ctx.fillRect(-L / 2, Wd / 2 - 4, 3, 3);
-  if (c.kind === 'cop') {
-    if (c.lane) { // патруль без розыска: мигалка выключена
+  if (c.kind === 'cop' || c.wasCop) {
+    if (c.lane || c.wasCop) { // патруль без розыска или угнанный нами: мигалка выключена
       ctx.fillStyle = '#3A3F6A'; ctx.fillRect(-3, -Wd / 2 + 2, 5, 4); ctx.fillStyle = '#6A3A3F'; ctx.fillRect(-3, Wd / 2 - 6, 5, 4);
     } else {
       const ph = Math.floor(time * 7) % 2;
@@ -3373,8 +3501,13 @@ function drawFloaters() {
   ctx.font = '9px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const f of floaters) {
     ctx.globalAlpha = clamp(f.life / 0.5, 0, 1);
-    ctx.fillStyle = '#000'; ctx.fillText(f.text, f.x + 1, f.y + 1);
-    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+    // звезда в надписи над бонусом – тем же спрайтом, что в HUD: в пиксельном шрифте ★ нет
+    const star = f.text.indexOf('★') >= 0;
+    const text = star ? f.text.replace('★', '') : f.text;
+    const w = ctx.measureText(text).width, x = star ? f.x - 5 : f.x;
+    ctx.fillStyle = '#000'; ctx.fillText(text, x + 1, f.y + 1);
+    ctx.fillStyle = f.color; ctx.fillText(text, x, f.y);
+    if (star) drawPix('fx-star' + f.color, PIX.star, { '#': f.color }, 1, x + w / 2 + 5, f.y, true);
   }
   ctx.globalAlpha = 1;
 }
@@ -3850,12 +3983,15 @@ function frame(now) {
 
 document.getElementById('btn-start').addEventListener('click', start);
 document.getElementById('btn-again').addEventListener('click', start);
+// воронка в Метрике: сколько дошло от игры до пресейва и до заявки на розыгрыш
+const btnPresave = document.getElementById('end-link');
+if (btnPresave) btnPresave.addEventListener('click', () => goal('PRESAVE'));
 const btnMail = document.getElementById('btn-mail'); // в билде для каталога формы розыгрыша нет
 if (btnMail) btnMail.addEventListener('click', async () => {
   const el = document.getElementById('pmail'), note = document.getElementById('mail-note'), email = (el.value || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { note.textContent = 'проверь адрес'; return; }
   note.textContent = 'отправляю…';
-  try { await Scores.email(email, lastRec || { name: curName }); try { localStorage.setItem(MAIL_KEY, email); } catch (e) {} note.textContent = 'заявка принята: ' + email; }
+  try { await Scores.email(email, lastRec || { name: curName }); try { localStorage.setItem(MAIL_KEY, email); } catch (e) {} note.textContent = 'заявка принята: ' + email; goal('MAIL'); }
   catch (e) { note.textContent = 'нет связи – попробуй еще раз'; }
 });
 document.getElementById('btn-ad').addEventListener('click', () => closeRevive(true));
